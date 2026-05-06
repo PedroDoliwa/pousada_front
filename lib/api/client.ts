@@ -1,4 +1,5 @@
 ﻿import { ApiError } from "./errors";
+import { messageFromApiPayload } from "./parse-error";
 
 /** Token Bearer em memória (definir após login no cliente com `setAuthToken`). */
 let bearerToken: string | null = null;
@@ -27,6 +28,8 @@ export function getApiBaseUrl(): string | null {
 
 export type ApiRequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
+  /** Se `false`, não envia cabeçalho `Authorization` (login/registro). Padrão: `true`. */
+  auth?: boolean;
 };
 
 function buildUrl(path: string): string {
@@ -68,16 +71,18 @@ export async function apiRequest<T>(
   path: string,
   init: ApiRequestOptions = {}
 ): Promise<T> {
-  const { body, headers: initHeaders, ...rest } = init;
+  const { body, headers: initHeaders, auth: useAuth = true, ...rest } = init;
   const headers = new Headers(initHeaders);
 
   if (shouldSetJsonContentType(body) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const token = getAuthToken();
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+  if (useAuth) {
+    const token = getAuthToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
   }
 
   const res = await fetch(buildUrl(path), {
@@ -89,7 +94,11 @@ export async function apiRequest<T>(
   const payload = await parseBody(res);
 
   if (!res.ok) {
-    throw new ApiError(res.status, payload, res.statusText);
+    throw new ApiError(
+      res.status,
+      payload,
+      messageFromApiPayload(payload, res.statusText)
+    );
   }
 
   return payload as T;

@@ -22,7 +22,9 @@ export interface Pousada {
   endereco: string;
   telefone: string;
   email: string;
-  descricao: string;
+  descricao: string | null;
+  /** Presente nas respostas de leitura da API. */
+  ativa?: boolean;
 }
 
 export interface Quarto {
@@ -38,21 +40,23 @@ export interface Quarto {
 export interface Hospede {
   id: number;
   nome: string;
-  telefone: string;
-  email: string;
-  documento: string;
+  telefone: string | null;
+  email: string | null;
+  documento: string | null;
 }
 
 export interface Reserva {
   id: number;
   quartoId: number;
   hospedeId: number;
-  dataEntrada: IsoDateString;
-  dataSaida: IsoDateString;
+  /** ISO 8601 conforme API. */
+  dataEntrada: IsoDateTimeString;
+  dataSaida: IsoDateTimeString;
   status: string;
-  origem: string;
   valorTotal: number;
-  observacoes: string;
+  observacoes: string | null;
+  /** Se existir no banco / respostas futuras. */
+  origem?: string;
 }
 
 export interface BloqueioAgenda {
