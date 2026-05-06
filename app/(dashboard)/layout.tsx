@@ -1,7 +1,9 @@
-﻿export default function DashboardGroupLayout({
+﻿import { DashboardChrome } from "@/components/dashboard";
+
+export default function DashboardGroupLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <div className="flex min-h-full flex-1 flex-col">{children}</div>;
+  return <DashboardChrome>{children}</DashboardChrome>;
 }
