@@ -1,5 +1,5 @@
-﻿import { PagePlaceholder } from "@/components/dashboard";
+import { HospedesView } from "@/components/dashboard/hospedes-view";
 
 export default function HospedesPage() {
-  return <PagePlaceholder title="Hóspedes" />;
+  return <HospedesView />;
 }
