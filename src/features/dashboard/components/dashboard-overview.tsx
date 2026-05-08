@@ -84,12 +84,7 @@ export function DashboardOverview({ pousadas, loadExtras }: Props) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">Pousada ativa</p>
-          {pousadas.length === 0 ? (
-            <p className="mt-1 text-slate-700">
-              Nenhuma pousada cadastrada. Crie uma pela API ou pelo fluxo que
-              será adicionado aqui.
-            </p>
-          ) : (
+          {pousadas.length > 0 ? (
             <select
               id="pousada-select"
               className="mt-1 max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
@@ -105,7 +100,7 @@ export function DashboardOverview({ pousadas, loadExtras }: Props) {
                 </option>
               ))}
             </select>
-          )}
+          ) : null}
         </div>
       </div>
 

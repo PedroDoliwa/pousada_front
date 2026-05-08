@@ -6,7 +6,7 @@ import { useMemo } from "react";
 
 const ROUTE_META: Record<
   string,
-  { title: string; subtitleKey?: "greeting" }
+  { title: string; subtitleKey?: "greeting"; subtitle?: string }
 > = {
   "/dashboard": {
     title: "Dashboard",
@@ -14,7 +14,11 @@ const ROUTE_META: Record<
   },
   "/pousadas": { title: "Pousada" },
   "/quartos": { title: "Quartos" },
-  "/hospedes": { title: "Hóspedes" },
+  "/hospedes": {
+    title: "Hóspedes",
+    subtitle:
+      "Cadastre, edite e consulte os hóspedes da sua pousada.",
+  },
   "/reservas": { title: "Reservas" },
   "/calendario": { title: "Calendário" },
   "/integracoes-ical": { title: "Integração" },
@@ -53,7 +57,8 @@ export function DashboardHeader({ userName }: Props) {
   const subtitle =
     meta.subtitleKey === "greeting"
       ? `Bem-vindo(a), ${firstName}! Veja o resumo da sua pousada hoje.`
-      : `Gerencie as informações de ${meta.title.toLowerCase()}.`;
+      : meta.subtitle ??
+        `Gerencie as informações de ${meta.title.toLowerCase()}.`;
 
   return (
     <header className="flex shrink-0 flex-wrap items-start justify-between gap-4 border-b border-slate-200 bg-white px-6 py-5">
