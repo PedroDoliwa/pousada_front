@@ -1,14 +1,11 @@
 import { api } from "./client";
 import { apiPath } from "./constants";
+import { withPousadaId } from "./query";
 import type { QuartoCreateBody, QuartoUpdateBody } from "@/types/dto";
 import type { Quarto } from "@/types/entities";
 
 export async function listQuartos(pousadaId?: number): Promise<Quarto[]> {
-  const qs =
-    pousadaId != null
-      ? `?pousadaId=${encodeURIComponent(String(pousadaId))}`
-      : "";
-  return api.get<Quarto[]>(apiPath(`/quartos${qs}`));
+  return api.get<Quarto[]>(apiPath(withPousadaId("/quartos", pousadaId)));
 }
 
 export async function getQuarto(id: number): Promise<Quarto> {

@@ -39,6 +39,7 @@ export interface Quarto {
 
 export interface Hospede {
   id: number;
+  pousadaId: number;
   nome: string;
   telefone: string | null;
   email: string | null;

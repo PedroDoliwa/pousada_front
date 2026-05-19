@@ -1,27 +1,19 @@
 "use client";
 
 import { Loader2, Building2, MapPin } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { ApiError } from "@/services/api";
-import type { Pousada, Quarto, Reserva } from "@/types/entities";
-
-const STORAGE_KEY = "pousada_selected_id";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { ApiError, handleApiErrorForClient } from "@/services/api";
+import { useActivePousada } from "@/features/pousada";
+import type { Quarto, Reserva } from "@/types/entities";
 
 type Props = {
-  pousadas: Pousada[];
   loadExtras: (pousadaId: number) => Promise<{ quartos: Quarto[]; reservas: Reserva[] }>;
 };
 
-export function DashboardOverview({ pousadas, loadExtras }: Props) {
+export function DashboardOverview({ loadExtras }: Props) {
+  const { pousadas, selectedId, selected, setSelectedId } = useActivePousada();
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<number | null>(() => {
-    if (typeof window === "undefined") return pousadas[0]?.id ?? null;
-    const stored = window.sessionStorage.getItem(STORAGE_KEY);
-    const parsed = stored ? Number.parseInt(stored, 10) : NaN;
-    const valid =
-      Number.isFinite(parsed) && pousadas.some((p) => p.id === parsed);
-    return valid ? parsed! : pousadas[0]?.id ?? null;
-  });
   const [quartos, setQuartos] = useState<Quarto[]>([]);
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [loadingExtra, setLoadingExtra] = useState(false);
@@ -41,6 +33,7 @@ export function DashboardOverview({ pousadas, loadExtras }: Props) {
         });
       } catch (e) {
         if (cancelled) return;
+        if (handleApiErrorForClient(e)) return;
         setError(
           e instanceof ApiError ? e.message : "Não foi possível carregar os dados."
         );
@@ -56,17 +49,9 @@ export function DashboardOverview({ pousadas, loadExtras }: Props) {
     };
   }, [selectedId, loadExtras]);
 
-  const selected = useMemo(
-    () => pousadas.find((p) => p.id === selectedId),
-    [pousadas, selectedId]
-  );
-
   function handleSelect(id: number) {
     setError(null);
     setSelectedId(id);
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(STORAGE_KEY, String(id));
-    }
   }
 
   if (error) {
@@ -100,7 +85,17 @@ export function DashboardOverview({ pousadas, loadExtras }: Props) {
                 </option>
               ))}
             </select>
-          ) : null}
+          ) : (
+            <p className="mt-2 text-sm text-slate-600">
+              Nenhuma pousada cadastrada.{" "}
+              <Link
+                href="/pousadas"
+                className="font-medium text-blue-600 hover:text-blue-700"
+              >
+                Cadastre sua primeira pousada
+              </Link>
+            </p>
+          )}
         </div>
       </div>
 
@@ -156,4 +151,3 @@ export function DashboardOverview({ pousadas, loadExtras }: Props) {
     </div>
   );
 }
-

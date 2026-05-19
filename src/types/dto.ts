@@ -14,11 +14,11 @@ export type AuthLoginBody = {
   senha: string;
 };
 
+/** `perfil` no body é ignorado pelo backend (sempre grava "Gerente"). */
 export type AuthRegistroBody = {
   nome: string;
   email: string;
   senha: string;
-  perfil?: string;
 };
 
 /** Corpo de erro comum na API (`400`, `404`, `500`) */
@@ -27,7 +27,6 @@ export type ApiMessageBody = {
 };
 
 export type PousadaCreateBody = {
-  usuarioId: number;
   nome: string;
   descricao?: string | null;
   endereco: string;
@@ -60,6 +59,7 @@ export type QuartoUpdateBody = {
 };
 
 export type HospedeCreateBody = {
+  pousadaId: number;
   nome: string;
   telefone?: string | null;
   email?: string | null;

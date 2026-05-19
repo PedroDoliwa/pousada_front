@@ -1,7 +1,18 @@
 import { LoginForm } from "@/features/auth";
 import { loginAction } from "@/features/auth/actions";
+import { safeRedirectPath } from "@/features/auth/schema";
 
-export default function LoginPage() {
-  return <LoginForm action={loginAction} />;
+type Props = {
+  searchParams: Promise<{ next?: string }>;
+};
+
+export default async function LoginPage({ searchParams }: Props) {
+  const { next } = await searchParams;
+  return (
+    <LoginForm
+      action={loginAction}
+      redirectTo={safeRedirectPath(next)}
+    />
+  );
 }
 

@@ -30,9 +30,14 @@ async function parseBody(res: Response): Promise<unknown> {
   }
 }
 
+export type ApiRequestServerInit = Omit<RequestInit, "body"> & {
+  auth?: boolean;
+  body?: unknown;
+};
+
 export async function apiRequestServer<T>(
   path: string,
-  init: RequestInit & { auth?: boolean; body?: unknown } = {}
+  init: ApiRequestServerInit = {}
 ): Promise<T> {
   const { auth = true, body, headers: initHeaders, ...rest } = init;
   const headers = new Headers(initHeaders);
@@ -53,9 +58,17 @@ export async function apiRequestServer<T>(
     cache: "no-store",
   });
 
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
   const payload = await parseBody(res);
   if (!res.ok) {
-    throw new ApiError(res.status, payload, messageFromApiPayload(payload, res.statusText));
+    throw new ApiError(
+      res.status,
+      payload,
+      messageFromApiPayload(payload, res.statusText)
+    );
   }
   return payload as T;
 }

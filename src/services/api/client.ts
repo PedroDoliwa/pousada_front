@@ -1,7 +1,11 @@
 import { ApiError } from "./errors";
+import { redirectToLoginOnClient } from "./handle-unauthorized";
 import { messageFromApiPayload } from "./parse-error";
 
-/** Token Bearer em memória (definir após login no cliente com `setAuthToken`). */
+/**
+ * Token Bearer em memória — apenas para `/dev/api-smoke`.
+ * Em produção o JWT fica no cookie httpOnly e as telas usam Server Actions + `apiRequestServer`.
+ */
 let bearerToken: string | null = null;
 
 export function setAuthToken(token: string | null): void {
@@ -91,9 +95,17 @@ export async function apiRequest<T>(
     body: serializeBody(body),
   });
 
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
   const payload = await parseBody(res);
 
   if (!res.ok) {
+    if (res.status === 401) {
+      clearAuth();
+      redirectToLoginOnClient();
+    }
     throw new ApiError(
       res.status,
       payload,

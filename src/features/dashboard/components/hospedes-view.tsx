@@ -11,18 +11,16 @@ import {
   User,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { ApiError, handleApiErrorForClient } from "@/services/api";
 import {
-  ApiError,
-  createHospede,
-  deleteHospede,
-  listHospedes,
-  listPousadas,
-  listReservas,
-  updateHospede,
-} from "@/lib/api";
+  createHospedeServer,
+  deleteHospedeServer,
+  listHospedesServer,
+  updateHospedeServer,
+} from "@/features/hospedes";
+import { listReservasServer } from "@/features/dashboard/actions";
+import { useActivePousada } from "@/features/pousada";
 import type { Hospede } from "@/types/entities";
-
-const STORAGE_POUSADA_KEY = "pousada_selected_id";
 
 function formatPhoneBR(value: string | null): string {
   if (!value?.trim()) return "—";
@@ -68,7 +66,13 @@ const emptyForm = (): FormState => ({
   documento: "",
 });
 
+function apiErrorMessage(err: unknown, fallback: string): string | null {
+  if (handleApiErrorForClient(err)) return null;
+  return err instanceof ApiError ? err.message : fallback;
+}
+
 export function HospedesView() {
+  const { selectedId: pousadaId, pousadas } = useActivePousada();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hospedes, setHospedes] = useState<Hospede[]>([]);
@@ -89,45 +93,45 @@ export function HospedesView() {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    if (pousadaId == null) {
+      queueMicrotask(() => {
+        setLoading(false);
+        setHospedes([]);
+        setReservaCountByHospede(new Map());
+        if (pousadas.length === 0) {
+          setError(
+            "Cadastre uma pousada antes de gerenciar hóspedes."
+          );
+        } else {
+          setError("Selecione uma pousada ativa no painel.");
+        }
+      });
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       setError(null);
       setLoading(true);
       try {
-        const [rows, pousadas] = await Promise.all([
-          listHospedes(),
-          listPousadas(),
-        ]);
+        const rows = await listHospedesServer(pousadaId);
         if (cancelled) return;
         setHospedes(rows);
 
-        const stored =
-          typeof window !== "undefined"
-            ? window.sessionStorage.getItem(STORAGE_POUSADA_KEY)
-            : null;
-        const parsed = stored ? Number.parseInt(stored, 10) : NaN;
-        const valid =
-          Number.isFinite(parsed) && pousadas.some((p) => p.id === parsed);
-        const pousadaId = valid ? parsed! : pousadas[0]?.id ?? null;
-
-        if (pousadaId != null) {
-          const reservas = await listReservas(pousadaId);
-          if (cancelled) return;
-          const map = new Map<number, number>();
-          for (const r of reservas) {
-            map.set(r.hospedeId, (map.get(r.hospedeId) ?? 0) + 1);
-          }
-          setReservaCountByHospede(map);
-        } else {
-          setReservaCountByHospede(new Map());
+        const reservas = await listReservasServer(pousadaId);
+        if (cancelled) return;
+        const map = new Map<number, number>();
+        for (const r of reservas) {
+          map.set(r.hospedeId, (map.get(r.hospedeId) ?? 0) + 1);
         }
+        setReservaCountByHospede(map);
       } catch (e) {
         if (!cancelled) {
-          setError(
-            e instanceof ApiError
-              ? e.message
-              : "Não foi possível carregar os hóspedes."
+          const msg = apiErrorMessage(
+            e,
+            "Não foi possível carregar os hóspedes."
           );
+          if (msg) setError(msg);
           setHospedes([]);
           setReservaCountByHospede(new Map());
         }
@@ -138,7 +142,7 @@ export function HospedesView() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, [reloadKey, pousadaId, pousadas.length]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -154,6 +158,10 @@ export function HospedesView() {
   }, [hospedes, search]);
 
   function openCreate() {
+    if (pousadaId == null) {
+      setError("Selecione uma pousada ativa antes de cadastrar hóspedes.");
+      return;
+    }
     setForm(emptyForm());
     setModal({ mode: "create" });
   }
@@ -172,20 +180,26 @@ export function HospedesView() {
     e.preventDefault();
     const nome = form.nome.trim();
     if (!nome) return;
+    if (pousadaId == null) {
+      setError("Selecione uma pousada ativa antes de salvar.");
+      return;
+    }
 
     setSaving(true);
     setError(null);
     try {
       if (modal?.mode === "create") {
-        await createHospede({
+        await createHospedeServer({
+          pousadaId,
           nome,
           telefone: form.telefone.trim() || null,
           email: form.email.trim() || null,
           documento: form.documento.trim() || null,
         });
       } else if (modal?.mode === "edit") {
-        await updateHospede(modal.hospede.id, {
+        await updateHospedeServer(modal.hospede.id, {
           id: modal.hospede.id,
+          pousadaId: modal.hospede.pousadaId,
           nome,
           telefone: form.telefone.trim() || null,
           email: form.email.trim() || null,
@@ -195,11 +209,8 @@ export function HospedesView() {
       setModal(null);
       setReloadKey((k) => k + 1);
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Não foi possível salvar o hóspede."
-      );
+      const msg = apiErrorMessage(err, "Não foi possível salvar o hóspede.");
+      if (msg) setError(msg);
     } finally {
       setSaving(false);
     }
@@ -210,15 +221,12 @@ export function HospedesView() {
     setDeleting(true);
     setError(null);
     try {
-      await deleteHospede(deleteTarget.id);
+      await deleteHospedeServer(deleteTarget.id);
       setDeleteTarget(null);
       setReloadKey((k) => k + 1);
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Não foi possível excluir o hóspede."
-      );
+      const msg = apiErrorMessage(err, "Não foi possível excluir o hóspede.");
+      if (msg) setError(msg);
     } finally {
       setDeleting(false);
     }
@@ -267,7 +275,8 @@ export function HospedesView() {
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+          disabled={pousadaId == null}
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Plus className="size-4" aria-hidden />
           Novo hóspede

@@ -1,14 +1,11 @@
 import { api } from "./client";
 import { apiPath } from "./constants";
+import { withPousadaId } from "./query";
 import type { ReservaCreateBody, ReservaUpdateBody } from "@/types/dto";
 import type { Reserva } from "@/types/entities";
 
 export async function listReservas(pousadaId?: number): Promise<Reserva[]> {
-  const qs =
-    pousadaId != null
-      ? `?pousadaId=${encodeURIComponent(String(pousadaId))}`
-      : "";
-  return api.get<Reserva[]>(apiPath(`/reservas${qs}`));
+  return api.get<Reserva[]>(apiPath(withPousadaId("/reservas", pousadaId)));
 }
 
 export async function getReserva(id: number): Promise<Reserva> {

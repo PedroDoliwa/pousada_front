@@ -1,10 +1,13 @@
 import { api } from "./client";
 import { apiPath } from "./constants";
+import { withPousadaId } from "./query";
 import type { HospedeCreateBody, HospedeUpdateBody } from "@/types/dto";
 import type { Hospede } from "@/types/entities";
 
-export async function listHospedes(): Promise<Hospede[]> {
-  return api.get<Hospede[]>(apiPath("/hospedes"));
+export async function listHospedes(pousadaId?: number): Promise<Hospede[]> {
+  return api.get<Hospede[]>(
+    apiPath(withPousadaId("/hospedes", pousadaId))
+  );
 }
 
 export async function getHospede(id: number): Promise<Hospede> {

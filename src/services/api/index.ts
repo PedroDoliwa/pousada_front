@@ -1,6 +1,12 @@
 export { ApiError } from "./errors";
 export { API_PREFIX, apiPath } from "./constants";
 export { messageFromApiPayload } from "./parse-error";
+export { withPousadaId } from "./query";
+export {
+  handleApiErrorForClient,
+  redirectToLoginOnClient,
+} from "./handle-unauthorized";
+export { apiRequestServer } from "./server-client";
 export {
   api,
   apiRequest,
