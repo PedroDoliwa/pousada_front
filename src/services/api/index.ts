@@ -21,6 +21,8 @@ export * as pousadasApi from "./pousadas";
 export * as quartosApi from "./quartos";
 export * as hospedesApi from "./hospedes";
 export * as reservasApi from "./reservas";
+export * as calendariosApi from "./calendarios";
+export * as metricasApi from "./metricas";
 export { login, registro } from "./auth";
 export {
   createPousada,
@@ -48,6 +50,18 @@ export {
   deleteReserva,
   getReserva,
   listReservas,
+  listOcupacao,
   updateReserva,
+  verificarDisponibilidade,
 } from "./reservas";
+export {
+  createCalendario,
+  deleteCalendario,
+  getCalendario,
+  listCalendarios,
+  sincronizarCalendario,
+  updateCalendario,
+} from "./calendarios";
+export { getMetricas } from "./metricas";
+export { urlExportacaoIcs } from "./quartos";
 

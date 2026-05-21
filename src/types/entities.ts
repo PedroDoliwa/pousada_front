@@ -35,6 +35,8 @@ export interface Quarto {
   /** Tarifa diária; decimal na API costuma vir como number. */
   valorDiaria: number;
   status: string;
+  /** Token público para exportação `.ics` (sem JWT na URL). */
+  tokenExportacao: string;
 }
 
 export interface Hospede {
@@ -46,6 +48,8 @@ export interface Hospede {
   documento: string | null;
 }
 
+export type ReservaOrigem = "Manual" | "Airbnb" | "Booking" | "Outro";
+
 export interface Reserva {
   id: number;
   quartoId: number;
@@ -56,8 +60,8 @@ export interface Reserva {
   status: string;
   valorTotal: number;
   observacoes: string | null;
-  /** Se existir no banco / respostas futuras. */
-  origem?: string;
+  origem: ReservaOrigem;
+  tituloExterno?: string | null;
 }
 
 export interface BloqueioAgenda {
@@ -68,11 +72,54 @@ export interface BloqueioAgenda {
   motivo: string;
 }
 
-export interface IntegracaoICal {
+export type CalendarioCanal = "Airbnb" | "Booking" | "Outro";
+
+/** Feed iCal externo (importação Airbnb/Booking). */
+export interface CalendarioExterno {
   id: number;
   quartoId: number;
-  urlCalendario: string;
-  plataforma: string;
-  ultimaSincronizacao: IsoDateTimeString | null;
+  canal: CalendarioCanal | string;
+  urlImportacao: string;
+  ativo: boolean;
+  ultimaSincronizacao?: IsoDateTimeString | null;
+  ultimoErro?: string | null;
 }
+
+export interface CalendarioSyncResult {
+  criados: number;
+  atualizados: number;
+  cancelados: number;
+  ignorados: number;
+}
+
+/** Período de ocupação para grade de calendário (`GET /api/reservas/ocupacao`). */
+export interface OcupacaoPeriodo {
+  reservaId: number;
+  quartoId: number;
+  quartoNumeroOuNome: string;
+  hospedeId: number;
+  hospedeNome: string;
+  dataEntrada: IsoDateTimeString;
+  dataSaida: IsoDateTimeString;
+  status: string;
+  origem: ReservaOrigem;
+}
+
+export interface Metricas {
+  pousadaId: number;
+  de: IsoDateTimeString;
+  ate: IsoDateTimeString;
+  totalQuartos: number;
+  totalReservas: number;
+  taxaOcupacaoPercentual: number;
+  faturamentoTotal: number;
+  hospedesUnicos: number;
+}
+
+export interface VerificarDisponibilidadeResponse {
+  disponivel: boolean;
+}
+
+/** @deprecated Use `CalendarioExterno`. */
+export type IntegracaoICal = CalendarioExterno;
 

@@ -12,14 +12,24 @@ export type {
   QuartoUpdateBody,
   ReservaCreateBody,
   ReservaUpdateBody,
+  VerificarDisponibilidadeBody,
+  CalendarioExternoCreateBody,
+  CalendarioExternoUpdateBody,
 } from "./dto";
 export type {
   BloqueioAgenda,
+  CalendarioCanal,
+  CalendarioExterno,
+  CalendarioSyncResult,
   Hospede,
   IntegracaoICal,
+  Metricas,
+  OcupacaoPeriodo,
   Pousada,
   Quarto,
   Reserva,
+  ReservaOrigem,
   Usuario,
+  VerificarDisponibilidadeResponse,
 } from "./entities";
 

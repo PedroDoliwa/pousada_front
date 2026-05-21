@@ -1,4 +1,5 @@
 import type { IsoDateTimeString } from "./common";
+import type { CalendarioCanal } from "./entities";
 
 /** Resposta de `POST /api/auth/login` e `POST /api/auth/registro` */
 export type AuthSessionResponse = {
@@ -86,5 +87,25 @@ export type ReservaUpdateBody = {
   dataSaida: IsoDateTimeString;
   observacoes?: string | null;
   status?: string;
+};
+
+export type VerificarDisponibilidadeBody = {
+  quartoId: number;
+  dataEntrada: IsoDateTimeString;
+  dataSaida: IsoDateTimeString;
+  reservaIdIgnorar?: number | null;
+};
+
+export type CalendarioExternoCreateBody = {
+  quartoId: number;
+  canal: CalendarioCanal;
+  urlImportacao: string;
+};
+
+export type CalendarioExternoUpdateBody = {
+  id: number;
+  canal: CalendarioCanal;
+  urlImportacao: string;
+  ativo: boolean;
 };
 
