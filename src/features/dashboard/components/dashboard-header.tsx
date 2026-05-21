@@ -13,7 +13,10 @@ const ROUTE_META: Record<
     subtitleKey: "greeting",
   },
   "/pousadas": { title: "Pousada" },
-  "/quartos": { title: "Quartos" },
+  "/quartos": {
+    title: "Quartos",
+    subtitle: "Gerencie os quartos e suas informações.",
+  },
   "/hospedes": {
     title: "Hóspedes",
     subtitle:

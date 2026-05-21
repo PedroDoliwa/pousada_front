@@ -1,6 +1,5 @@
-import { PagePlaceholder } from "@/features/dashboard";
+import { QuartosView } from "@/features/quartos";
 
 export default function QuartosPage() {
-  return <PagePlaceholder title="Quartos" />;
+  return <QuartosView />;
 }
-
