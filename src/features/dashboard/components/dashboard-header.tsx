@@ -24,7 +24,11 @@ const ROUTE_META: Record<
   },
   "/reservas": { title: "Reservas" },
   "/calendario": { title: "Calendário" },
-  "/integracoes-ical": { title: "Integração" },
+  "/integracoes-ical": {
+    title: "Integrações",
+    subtitle:
+      "Importe reservas do Airbnb ou Booking e exporte bloqueios para as plataformas.",
+  },
   "/consulta-inteligente": { title: "Consulta Inteligente" },
   "/relatorios": { title: "Relatórios" },
   "/configuracoes": { title: "Configurações" },

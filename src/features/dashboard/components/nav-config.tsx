@@ -25,7 +25,7 @@ export const DASHBOARD_NAV: NavItem[] = [
   { href: "/hospedes", label: "Hóspedes", icon: Users },
   { href: "/reservas", label: "Reservas", icon: CalendarRange },
   { href: "/calendario", label: "Calendário", icon: CalendarDays },
-  { href: "/integracoes-ical", label: "Integração", icon: Plug },
+  { href: "/integracoes-ical", label: "Integrações", icon: Plug },
   { href: "/consulta-inteligente", label: "Consulta Inteligente", icon: Sparkles },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/configuracoes", label: "Configurações", icon: Settings },

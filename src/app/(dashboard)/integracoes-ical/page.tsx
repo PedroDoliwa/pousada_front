@@ -1,6 +1,5 @@
-import { PagePlaceholder } from "@/features/dashboard";
+import { IntegracaoIcalView } from "@/features/calendarios";
 
 export default function IntegracoesIcalPage() {
-  return <PagePlaceholder title="Integração" />;
+  return <IntegracaoIcalView />;
 }
-
