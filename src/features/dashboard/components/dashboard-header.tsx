@@ -22,7 +22,10 @@ const ROUTE_META: Record<
     subtitle:
       "Cadastre, edite e consulte os hóspedes da sua pousada.",
   },
-  "/reservas": { title: "Reservas" },
+  "/reservas": {
+    title: "Reservas",
+    subtitle: "Visualize, edite ou cancele reservas da sua pousada.",
+  },
   "/calendario": { title: "Calendário" },
   "/integracoes-ical": {
     title: "Integrações",
@@ -38,12 +41,36 @@ type Props = {
   userName: string;
 };
 
+function resolveMeta(pathname: string) {
+  if (pathname === "/reservas/nova") {
+    return {
+      title: "Nova reserva",
+      subtitle: "Cadastre uma reserva manual com verificação de disponibilidade.",
+    };
+  }
+  if (/^\/reservas\/\d+\/editar$/.test(pathname)) {
+    return {
+      title: "Editar reserva",
+      subtitle: "Altere datas, hóspede ou quarto da reserva manual.",
+    };
+  }
+  if (/^\/reservas\/\d+$/.test(pathname)) {
+    return {
+      title: "Detalhe da reserva",
+      subtitle: "Visualização de reserva importada ou manual.",
+    };
+  }
+  return (
+    ROUTE_META[pathname] ?? {
+      title: "Painel",
+      subtitleKey: "greeting" as const,
+    }
+  );
+}
+
 export function DashboardHeader({ userName }: Props) {
   const pathname = usePathname();
-  const meta = ROUTE_META[pathname] ?? {
-    title: "Painel",
-    subtitleKey: "greeting" as const,
-  };
+  const meta = resolveMeta(pathname);
 
   const firstName = useMemo(
     () => userName.split(/\s+/)[0] ?? userName,

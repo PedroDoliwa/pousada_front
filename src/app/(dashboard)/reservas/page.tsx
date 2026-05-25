@@ -1,6 +1,5 @@
-import { PagePlaceholder } from "@/features/dashboard";
+import { ReservasView } from "@/features/reservas";
 
 export default function ReservasPage() {
-  return <PagePlaceholder title="Reservas" />;
+  return <ReservasView />;
 }
-
