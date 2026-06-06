@@ -1,6 +1,6 @@
-import { PagePlaceholder } from "@/features/dashboard";
+import { loadRelatoriosDataServer, RelatoriosView } from "@/features/relatorios";
 
 export default function RelatoriosPage() {
-  return <PagePlaceholder title="Relatórios" />;
+  return <RelatoriosView loadData={loadRelatoriosDataServer} />;
 }
 
