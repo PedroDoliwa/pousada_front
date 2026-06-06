@@ -1,6 +1,6 @@
-import { PagePlaceholder } from "@/features/dashboard";
+import { PousadasView } from "@/features/pousada";
 
 export default function PousadasPage() {
-  return <PagePlaceholder title="Cadastro da pousada" />;
+  return <PousadasView />;
 }
 

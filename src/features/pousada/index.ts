@@ -8,3 +8,4 @@ export {
   useActivePousada,
   useActivePousadaOptional,
 } from "./use-active-pousada";
+export { PousadasView } from "./components/pousadas-view";

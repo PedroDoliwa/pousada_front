@@ -10,11 +10,11 @@ export default async function DashboardGroupLayout({
   const pousadas = await listPousadasServer();
 
   return (
-    <DashboardChrome>
-      <ActivePousadaProvider pousadas={pousadas}>
+    <ActivePousadaProvider pousadas={pousadas}>
+      <DashboardChrome>
         {children}
-      </ActivePousadaProvider>
-    </DashboardChrome>
+      </DashboardChrome>
+    </ActivePousadaProvider>
   );
 }
 

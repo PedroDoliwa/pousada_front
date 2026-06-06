@@ -34,3 +34,11 @@ export async function updatePousadaServer(
     })
   );
 }
+
+export async function deletePousadaServer(id: number): Promise<void> {
+  return withAuthRedirect(() =>
+    apiRequestServer<void>(apiPath(`/pousadas/${id}`), {
+      method: "DELETE",
+    })
+  );
+}
