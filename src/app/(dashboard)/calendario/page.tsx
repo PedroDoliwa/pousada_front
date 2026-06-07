@@ -1,6 +1,5 @@
-import { PagePlaceholder } from "@/features/dashboard";
+import { CalendarioView, loadCalendarioDataServer } from "@/features/calendario";
 
 export default function CalendarioPage() {
-  return <PagePlaceholder title="Calendário de ocupação" />;
+  return <CalendarioView loadData={loadCalendarioDataServer} />;
 }
-
