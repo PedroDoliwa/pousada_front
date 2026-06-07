@@ -21,6 +21,7 @@ import {
   buildDayCell,
   dayDiff,
   formatDateBR,
+  isBloqueada,
   isCancelada,
   isImportada,
   nightsInRange,
@@ -194,9 +195,14 @@ export function CalendarioView({ loadData }: Props) {
     );
 
     const ativas = ocupacao.filter((o) => !isCancelada(o.status));
-    const reservas = new Set(ativas.map((o) => o.reservaId)).size;
+    const reservasValidas = ativas.filter((o) => !isBloqueada(o.status));
+    const bloqueios = ativas.filter((o) => isBloqueada(o.status));
+    const reservas = new Set(reservasValidas.map((o) => o.reservaId)).size;
     const importadas = new Set(
-      ativas.filter((o) => isImportada(o.origem)).map((o) => o.reservaId)
+      reservasValidas.filter((o) => isImportada(o.origem)).map((o) => o.reservaId)
+    ).size;
+    const bloqueiosExternos = new Set(
+      bloqueios.filter((o) => isImportada(o.origem)).map((o) => o.reservaId)
     ).size;
 
     const occupiedNights = ativas.reduce(
@@ -209,6 +215,7 @@ export function CalendarioView({ loadData }: Props) {
     return {
       reservas,
       importadas,
+      bloqueiosExternos,
       occupancy,
       quartos: quartos.length,
     };
@@ -445,7 +452,9 @@ export function CalendarioView({ loadData }: Props) {
                             onClick={() => openReserva(o.reservaId)}
                             title={`${ocupacaoTitulo(o)} · ${formatDateBR(
                               o.dataEntrada
-                            )} → ${formatDateBR(o.dataSaida)}`}
+                            )} → ${formatDateBR(o.dataSaida)}${
+                              o.observacoes ? ` · ${o.observacoes}` : ""
+                            }`}
                             className={`absolute flex flex-col justify-center overflow-hidden rounded-md border px-2 text-left transition hover:brightness-95 ${tone.bar}`}
                             style={{
                               left: startIdx * DAY_W + 2,
@@ -480,6 +489,7 @@ export function CalendarioView({ loadData }: Props) {
         <LegendItem dot="bg-blue-500" label="Reserva confirmada" />
         <LegendItem dot="bg-amber-400" label="Pendente" />
         <LegendItem dot="bg-violet-400" label="Importado (iCal)" />
+        <LegendItem dot="bg-red-400" label="Bloqueio externo" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
@@ -490,6 +500,10 @@ export function CalendarioView({ loadData }: Props) {
             <li>• Passe o mouse sobre uma reserva para ver o período.</li>
             <li>
               • Reservas importadas via iCal são atualizadas automaticamente.
+            </li>
+            <li>
+              • Bloqueios externos indisponibilizam o quarto, mas não entram no
+              total de reservas.
             </li>
           </ul>
         </div>
@@ -509,15 +523,15 @@ export function CalendarioView({ loadData }: Props) {
           />
           <SummaryCard
             icon={Plug}
-            label="Importações iCal"
+            label="Importações"
             value={String(summary.importadas)}
             tone="bg-violet-50 text-violet-600"
           />
           <SummaryCard
             icon={BedDouble}
-            label="Quartos"
-            value={String(summary.quartos)}
-            tone="bg-amber-50 text-amber-600"
+            label="Bloqueios externos"
+            value={String(summary.bloqueiosExternos)}
+            tone="bg-red-50 text-red-600"
           />
         </div>
       </div>
@@ -570,7 +584,7 @@ function ListaView({
                     {o.quartoNumeroOuNome}
                   </td>
                   <td className="px-4 py-3 text-slate-700">
-                    {o.hospedeNome?.trim() || "—"}
+                    {o.tituloExterno?.trim() || o.hospedeNome?.trim() || "—"}
                   </td>
                   <td className="px-4 py-3 text-slate-600">
                     {formatDateBR(o.dataEntrada)}

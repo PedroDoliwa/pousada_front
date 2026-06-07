@@ -97,12 +97,14 @@ export interface OcupacaoPeriodo {
   reservaId: number;
   quartoId: number;
   quartoNumeroOuNome: string;
-  hospedeId: number;
-  hospedeNome: string;
+  hospedeId?: number | null;
+  hospedeNome?: string | null;
   dataEntrada: IsoDateTimeString;
   dataSaida: IsoDateTimeString;
   status: string;
   origem: ReservaOrigem;
+  tituloExterno?: string | null;
+  observacoes?: string | null;
 }
 
 export interface Metricas {

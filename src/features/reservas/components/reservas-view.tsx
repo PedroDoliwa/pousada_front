@@ -26,7 +26,13 @@ import {
 import { useActivePousada } from "@/features/pousada";
 import type { Hospede, Quarto, Reserva, ReservaOrigem } from "@/types/entities";
 
-const STATUS_FILTERS = ["todos", "Confirmada", "Pendente", "Cancelada"] as const;
+const STATUS_FILTERS = [
+  "todos",
+  "Confirmada",
+  "Pendente",
+  "Bloqueada",
+  "Cancelada",
+] as const;
 const ORIGEM_FILTERS = ["todas", "Manual", "Airbnb", "Booking", "Outro"] as const;
 
 type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -40,6 +46,7 @@ function apiErrorMessage(err: unknown, fallback: string): string | null {
 function statusBadgeClass(status: string): string {
   const s = status.toLowerCase();
   if (s.includes("cancel")) return "bg-red-50 text-red-800 ring-red-600/20";
+  if (s.includes("bloque")) return "bg-slate-100 text-slate-800 ring-slate-500/20";
   if (s.includes("pend")) return "bg-amber-50 text-amber-900 ring-amber-600/20";
   return "bg-emerald-50 text-emerald-800 ring-emerald-600/20";
 }
@@ -151,6 +158,8 @@ export function ReservasView() {
         !q ||
         codigo.includes(q) ||
         hospede?.nome.toLowerCase().includes(q) ||
+        r.tituloExterno?.toLowerCase().includes(q) ||
+        r.observacoes?.toLowerCase().includes(q) ||
         quarto?.numeroOuNome.toLowerCase().includes(q);
 
       const matchesStatus =
@@ -185,11 +194,11 @@ export function ReservasView() {
   }, [filtered, page, totalPages]);
 
   useEffect(() => {
-    setPage(1);
+    queueMicrotask(() => setPage(1));
   }, [search, statusFilter, origemFilter, periodStart, periodEnd]);
 
   useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
+    if (page > totalPages) queueMicrotask(() => setPage(totalPages));
   }, [page, totalPages]);
 
   function clearFilters() {
@@ -375,6 +384,11 @@ export function ReservasView() {
                         {hospede?.telefone ? (
                           <p className="text-xs text-slate-500">
                             {hospede.telefone}
+                          </p>
+                        ) : null}
+                        {r.observacoes ? (
+                          <p className="max-w-[220px] truncate text-xs text-slate-500">
+                            {r.observacoes}
                           </p>
                         ) : null}
                       </td>

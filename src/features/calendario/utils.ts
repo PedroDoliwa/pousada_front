@@ -135,6 +135,10 @@ export function isImportada(origem: string | null | undefined): boolean {
   return (origem ?? "Manual") !== "Manual";
 }
 
+export function isBloqueada(status: string | null | undefined): boolean {
+  return (status ?? "").toLowerCase().includes("bloque");
+}
+
 export type OcupacaoTone = {
   /** Classes para a barra (borda + fundo + texto). */
   bar: string;
@@ -143,6 +147,9 @@ export type OcupacaoTone = {
 };
 
 export function ocupacaoTone(o: OcupacaoPeriodo): OcupacaoTone {
+  if (isBloqueada(o.status)) {
+    return { bar: "border-red-300 bg-red-100 text-red-900", dot: "bg-red-400" };
+  }
   if (isImportada(o.origem)) {
     return { bar: "border-violet-300 bg-violet-100 text-violet-900", dot: "bg-violet-400" };
   }
@@ -154,12 +161,16 @@ export function ocupacaoTone(o: OcupacaoPeriodo): OcupacaoTone {
 
 /** Rótulo principal exibido na barra da reserva. */
 export function ocupacaoTitulo(o: OcupacaoPeriodo): string {
-  const nome = o.hospedeNome?.trim() || "Reserva";
+  const nome =
+    o.tituloExterno?.trim() ||
+    o.hospedeNome?.trim() ||
+    (isBloqueada(o.status) ? "Bloqueio" : "Reserva");
   return isImportada(o.origem) ? `${o.origem} · ${nome}` : nome;
 }
 
 /** Rótulo secundário (origem/status) exibido na barra. */
 export function ocupacaoSubtitulo(o: OcupacaoPeriodo): string {
+  if (isBloqueada(o.status) && isImportada(o.origem)) return "Bloqueio importado";
   if (isImportada(o.origem)) return "Importado (iCal)";
   return o.status?.trim() || "Reserva";
 }
