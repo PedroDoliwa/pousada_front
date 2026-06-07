@@ -20,14 +20,18 @@ import {
   verificarDisponibilidadeServer,
 } from "@/features/reservas/actions";
 import {
+  DEFAULT_CHECKIN_TIME,
+  DEFAULT_CHECKOUT_TIME,
   dateInputsToIso,
   formatCurrencyBRL,
   formatDateTimeBR,
   formatReservaCodigo,
   isoToDateInput,
+  isoToTimeInput,
   isReservaImportada,
   monthBoundsFromDateInput,
   nightsBetween,
+  usesDefaultReservaTimes,
 } from "@/features/reservas/utils";
 import { useActivePousada } from "@/features/pousada";
 import type { Hospede, OcupacaoPeriodo, Quarto, Reserva } from "@/types/entities";
@@ -45,6 +49,14 @@ function apiErrorMessage(err: unknown, fallback: string): string | null {
 }
 
 const STATUS_OPTIONS = ["Confirmada", "Pendente", "Cancelada"];
+const WEEKDAYS_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function dateToInput(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 export function ReservaFormView({ mode, reservaId }: Props) {
   const router = useRouter();
@@ -62,6 +74,9 @@ export function ReservaFormView({ mode, reservaId }: Props) {
   const [quartoId, setQuartoId] = useState<number | "">("");
   const [dataEntrada, setDataEntrada] = useState("");
   const [dataSaida, setDataSaida] = useState("");
+  const [usarHorarioPadrao, setUsarHorarioPadrao] = useState(true);
+  const [horaEntrada, setHoraEntrada] = useState(DEFAULT_CHECKIN_TIME);
+  const [horaSaida, setHoraSaida] = useState(DEFAULT_CHECKOUT_TIME);
   const [status, setStatus] = useState("Confirmada");
   const [observacoes, setObservacoes] = useState("");
 
@@ -70,10 +85,11 @@ export function ReservaFormView({ mode, reservaId }: Props) {
 
   const readOnly = mode === "view" || (reserva != null && isReservaImportada(reserva.origem));
   const canEdit = !readOnly;
+  const availabilityMonthInput = dataEntrada || dateToInput(new Date());
 
   const isoRange = useMemo(
-    () => dateInputsToIso(dataEntrada, dataSaida),
-    [dataEntrada, dataSaida]
+    () => dateInputsToIso(dataEntrada, dataSaida, horaEntrada, horaSaida),
+    [dataEntrada, dataSaida, horaEntrada, horaSaida]
   );
 
   const selectedQuarto = useMemo(
@@ -92,31 +108,73 @@ export function ReservaFormView({ mode, reservaId }: Props) {
   }, [selectedQuarto, nights]);
 
   const calendarDays = useMemo(() => {
-    if (!dataEntrada) return [];
-    const [y, m] = dataEntrada.split("-").map(Number);
+    const [y, m] = availabilityMonthInput.split("-").map(Number);
     const daysInMonth = new Date(y!, m!, 0).getDate();
     return Array.from({ length: daysInMonth }, (_, i) => i + 1);
-  }, [dataEntrada]);
+  }, [availabilityMonthInput]);
+
+  const availabilityMonthLabel = useMemo(() => {
+    const [y, m] = availabilityMonthInput.split("-").map(Number);
+    const label = new Date(y!, m! - 1, 1).toLocaleDateString("pt-BR", {
+      month: "long",
+    });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }, [availabilityMonthInput]);
+
+  const calendarCells = useMemo(() => {
+    const [y, m] = availabilityMonthInput.split("-").map(Number);
+    const firstWeekday = new Date(y!, m! - 1, 1).getDay();
+    return [
+      ...Array.from({ length: firstWeekday }, () => null),
+      ...calendarDays,
+    ];
+  }, [availabilityMonthInput, calendarDays]);
+
+  const selectedDaySet = useMemo(() => {
+    const set = new Set<number>();
+    if (!dataEntrada || !dataSaida) return set;
+
+    const [y, m] = availabilityMonthInput.split("-").map(Number);
+    const start = new Date(`${dataEntrada}T00:00:00`);
+    const end = new Date(`${dataSaida}T23:59:59`);
+
+    for (const day of calendarDays) {
+      const current = new Date(y!, m! - 1, day, 12, 0, 0);
+      if (current >= start && current <= end) set.add(day);
+    }
+
+    return set;
+  }, [availabilityMonthInput, calendarDays, dataEntrada, dataSaida]);
 
   const occupiedDaySet = useMemo(() => {
     const set = new Set<number>();
-    if (quartoId === "" || !dataEntrada) return set;
-    const [y, m] = dataEntrada.split("-").map(Number);
+    if (quartoId === "") return set;
+    const [y, m] = availabilityMonthInput.split("-").map(Number);
     for (const o of ocupacao) {
       if (o.quartoId !== quartoId || o.status === "Cancelada") continue;
       const start = new Date(o.dataEntrada);
       const end = new Date(o.dataSaida);
+      const startDateOnly = new Date(
+        start.getFullYear(),
+        start.getMonth(),
+        start.getDate()
+      );
+      const endDateOnly = new Date(
+        end.getFullYear(),
+        end.getMonth(),
+        end.getDate()
+      );
       for (let d = 1; d <= 31; d++) {
-        const day = new Date(y!, m! - 1, d, 12, 0, 0);
-        if (day >= start && day < end) set.add(d);
+        const day = new Date(y!, m! - 1, d);
+        if (day >= startDateOnly && day <= endDateOnly) set.add(d);
       }
     }
     return set;
-  }, [ocupacao, quartoId, dataEntrada]);
+  }, [ocupacao, quartoId, availabilityMonthInput]);
 
   useEffect(() => {
     if (pousadaId == null) {
-      setLoading(false);
+      queueMicrotask(() => setLoading(false));
       return;
     }
 
@@ -139,6 +197,9 @@ export function ReservaFormView({ mode, reservaId }: Props) {
           setQuartoId(r.quartoId);
           setDataEntrada(isoToDateInput(r.dataEntrada));
           setDataSaida(isoToDateInput(r.dataSaida));
+          setHoraEntrada(isoToTimeInput(r.dataEntrada));
+          setHoraSaida(isoToTimeInput(r.dataSaida));
+          setUsarHorarioPadrao(usesDefaultReservaTimes(r.dataEntrada, r.dataSaida));
           setStatus(r.status);
           setObservacoes(r.observacoes ?? "");
         } else if (q[0]) {
@@ -160,12 +221,12 @@ export function ReservaFormView({ mode, reservaId }: Props) {
   }, [pousadaId, mode, reservaId]);
 
   useEffect(() => {
-    if (pousadaId == null || quartoId === "" || !dataEntrada) {
-      setOcupacao([]);
+    if (pousadaId == null || quartoId === "") {
+      queueMicrotask(() => setOcupacao([]));
       return;
     }
     let cancelled = false;
-    const { de, ate } = monthBoundsFromDateInput(dataEntrada);
+    const { de, ate } = monthBoundsFromDateInput(availabilityMonthInput);
     (async () => {
       try {
         const rows = await listOcupacaoServer(pousadaId, de, ate);
@@ -177,11 +238,11 @@ export function ReservaFormView({ mode, reservaId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [pousadaId, quartoId, dataEntrada]);
+  }, [pousadaId, quartoId, availabilityMonthInput]);
 
   useEffect(() => {
     if (!canEdit || !isoRange || quartoId === "") {
-      setDisponivel(null);
+      queueMicrotask(() => setDisponivel(null));
       return;
     }
 
@@ -210,6 +271,14 @@ export function ReservaFormView({ mode, reservaId }: Props) {
       clearTimeout(timer);
     };
   }, [canEdit, isoRange, quartoId, mode, reservaId]);
+
+  function handleHorarioPadraoChange(checked: boolean) {
+    setUsarHorarioPadrao(checked);
+    if (checked) {
+      setHoraEntrada(DEFAULT_CHECKIN_TIME);
+      setHoraSaida(DEFAULT_CHECKOUT_TIME);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -242,7 +311,6 @@ export function ReservaFormView({ mode, reservaId }: Props) {
         });
       }
       router.push("/reservas");
-      router.refresh();
     } catch (err) {
       const msg = apiErrorMessage(
         err,
@@ -383,6 +451,54 @@ export function ReservaFormView({ mode, reservaId }: Props) {
               </div>
             </div>
 
+            <div className="space-y-3 rounded-lg border border-slate-200 p-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <input
+                  type="checkbox"
+                  disabled={readOnly}
+                  checked={usarHorarioPadrao}
+                  onChange={(e) => handleHorarioPadraoChange(e.target.checked)}
+                  className="size-4 rounded border-slate-300"
+                />
+                Usar horário padrão
+              </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="res-checkin-time"
+                    className="block text-sm font-medium"
+                  >
+                    Horário de check-in
+                  </label>
+                  <input
+                    id="res-checkin-time"
+                    type="time"
+                    disabled={readOnly || usarHorarioPadrao}
+                    value={horaEntrada}
+                    onChange={(e) => setHoraEntrada(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="res-checkout-time"
+                    className="block text-sm font-medium"
+                  >
+                    Horário de check-out
+                  </label>
+                  <input
+                    id="res-checkout-time"
+                    type="time"
+                    disabled={readOnly || usarHorarioPadrao}
+                    value={horaSaida}
+                    onChange={(e) => setHoraSaida(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                  />
+                </div>
+              </div>
+            </div>
+
             {nights > 0 ? (
               <p className="text-sm text-slate-600">
                 <span className="font-medium">{nights}</span>{" "}
@@ -430,14 +546,14 @@ export function ReservaFormView({ mode, reservaId }: Props) {
             </div>
 
             {canEdit ? (
-              <div className="border-t border-slate-100 pt-4">
-                <p className="text-sm text-slate-600">Valor das diárias (estimado)</p>
-                <p className="text-lg font-semibold text-slate-900">
+              <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-5 text-center">
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+                  Valor das diárias
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight text-blue-950">
                   {formatCurrencyBRL(estimatedTotal)}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  O valor final é calculado pela API ao salvar.
-                </p>
+                <p className="mt-1 text-xs text-blue-700/80">Estimado pela estadia</p>
               </div>
             ) : reserva ? (
               <div className="border-t border-slate-100 pt-4">
@@ -462,49 +578,81 @@ export function ReservaFormView({ mode, reservaId }: Props) {
                   <p className="mt-1 text-sm text-red-800">
                     O quarto não está disponível no período escolhido.
                   </p>
-                  <Link
-                    href="/calendario"
-                    className="mt-2 inline-block text-sm font-medium text-red-900 underline"
-                  >
-                    Ver no calendário
-                  </Link>
                 </div>
               </div>
             </div>
           ) : null}
 
-          {canEdit && quartoId !== "" && dataEntrada ? (
+          {canEdit && quartoId !== "" ? (
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">
-                Disponibilidade do quarto
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                {checkingDisp
-                  ? "Verificando…"
-                  : disponivel === true
-                    ? "Período disponível"
-                    : disponivel === false
-                      ? "Indisponível"
-                      : "Informe as datas"}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-1">
-                {calendarDays.map((day) => {
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    Disponibilidade do quarto
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {!dataEntrada || !dataSaida
+                      ? "Selecione as datas para verificar o período."
+                      : checkingDisp
+                        ? "Verificando…"
+                        : disponivel === true
+                          ? "Período disponível"
+                          : disponivel === false
+                            ? "Indisponível"
+                            : "Informe as datas"}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium capitalize text-slate-700">
+                  {availabilityMonthLabel}
+                </span>
+              </div>
+              <div className="mt-3 grid grid-cols-7 gap-1">
+                {WEEKDAYS_SHORT.map((weekday) => (
+                  <span
+                    key={weekday}
+                    className="pb-1 text-center text-[10px] font-semibold uppercase text-slate-400"
+                  >
+                    {weekday}
+                  </span>
+                ))}
+                {calendarCells.map((day, index) => {
+                  if (day == null) {
+                    return (
+                      <span
+                        key={`empty-${index}`}
+                        className="min-h-8 rounded bg-slate-50/60"
+                        aria-hidden
+                      />
+                    );
+                  }
+
                   const busy = occupiedDaySet.has(day);
+                  const selected = selectedDaySet.has(day);
                   return (
                     <span
                       key={day}
-                      className={`flex size-8 items-center justify-center rounded text-xs ${
-                        busy
+                      className={`relative flex min-h-8 items-center justify-center rounded text-xs font-medium ${
+                        selected
+                          ? "bg-blue-600 text-white"
+                          : busy
                           ? "bg-red-100 text-red-800"
                           : "bg-emerald-50 text-emerald-800"
                       }`}
-                      title={busy ? "Ocupado" : "Livre"}
+                      title={
+                        selected
+                          ? "Período selecionado"
+                          : busy
+                            ? "Ocupado"
+                            : "Livre"
+                      }
                     >
+                      <span className="relative z-10">{day}</span>
                       {busy ? (
-                        <X className="size-3" aria-hidden />
-                      ) : (
-                        day
-                      )}
+                        <X
+                          className="absolute inset-0 m-auto size-6 opacity-40"
+                          aria-hidden
+                        />
+                      ) : null}
                     </span>
                   );
                 })}
@@ -536,6 +684,12 @@ export function ReservaFormView({ mode, reservaId }: Props) {
                   </dd>
                 </div>
               ) : null}
+              <div className="flex justify-between gap-2">
+                <dt className="text-slate-500">Valor das diárias</dt>
+                <dd className="text-right font-semibold text-slate-900">
+                  {formatCurrencyBRL(canEdit ? estimatedTotal : reserva?.valorTotal ?? 0)}
+                </dd>
+              </div>
               {reserva ? (
                 <div className="flex justify-between gap-2">
                   <dt className="text-slate-500">Origem</dt>
@@ -549,37 +703,37 @@ export function ReservaFormView({ mode, reservaId }: Props) {
               )}
             </dl>
           </div>
-        </aside>
 
-        <div className="flex justify-end gap-2 xl:col-span-2">
-          <Link
-            href="/reservas"
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            {readOnly ? "Voltar" : "Cancelar"}
-          </Link>
-          {canEdit ? (
-            <button
-              type="submit"
-              disabled={
-                saving ||
-                disponivel === false ||
-                checkingDisp ||
-                !isoRange ||
-                hospedeId === "" ||
-                quartoId === ""
-              }
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          <div className="flex justify-end gap-2">
+            <Link
+              href="/reservas"
+              className="inline-flex justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              {saving ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : (
-                <CalendarRange className="size-4" aria-hidden />
-              )}
-              Salvar reserva
-            </button>
-          ) : null}
-        </div>
+              {readOnly ? "Voltar" : "Cancelar"}
+            </Link>
+            {canEdit ? (
+              <button
+                type="submit"
+                disabled={
+                  saving ||
+                  disponivel === false ||
+                  !isoRange ||
+                  hospedeId === "" ||
+                  quartoId === ""
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+              >
+                {saving ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <CalendarRange className="size-4" aria-hidden />
+                )}
+                Salvar reserva
+              </button>
+            ) : null}
+          </div>
+
+        </aside>
       </form>
     </div>
   );

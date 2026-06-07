@@ -14,14 +14,37 @@ export function isoToDateInput(iso: string): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Check-in 14:00 e check-out 12:00 (horário local). */
-export function dateInputsToIso(
+export const DEFAULT_CHECKIN_TIME = "14:00";
+export const DEFAULT_CHECKOUT_TIME = "12:00";
+
+/** `HH:mm` para inputs type="time". */
+export function isoToTimeInput(iso: string): string {
+  const d = new Date(iso);
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+export function usesDefaultReservaTimes(
   dataEntrada: string,
   dataSaida: string
+): boolean {
+  return (
+    isoToTimeInput(dataEntrada) === DEFAULT_CHECKIN_TIME &&
+    isoToTimeInput(dataSaida) === DEFAULT_CHECKOUT_TIME
+  );
+}
+
+/** Combina data e hora locais e envia para a API como ISO DateTime. */
+export function dateInputsToIso(
+  dataEntrada: string,
+  dataSaida: string,
+  horaEntrada = DEFAULT_CHECKIN_TIME,
+  horaSaida = DEFAULT_CHECKOUT_TIME
 ): { dataEntrada: string; dataSaida: string } | null {
-  if (!dataEntrada || !dataSaida) return null;
-  const entrada = new Date(`${dataEntrada}T14:00:00`);
-  const saida = new Date(`${dataSaida}T12:00:00`);
+  if (!dataEntrada || !dataSaida || !horaEntrada || !horaSaida) return null;
+  const entrada = new Date(`${dataEntrada}T${horaEntrada}:00`);
+  const saida = new Date(`${dataSaida}T${horaSaida}:00`);
   if (Number.isNaN(entrada.getTime()) || Number.isNaN(saida.getTime())) {
     return null;
   }
