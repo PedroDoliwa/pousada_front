@@ -1,4 +1,4 @@
-import type { IsoDateTimeString } from "./common";
+﻿import type { IsoDateTimeString } from "./common";
 import type { CalendarioCanal } from "./entities";
 
 /** Resposta de `POST /api/auth/login` e `POST /api/auth/registro` */
@@ -107,5 +107,30 @@ export type CalendarioExternoUpdateBody = {
   canal: CalendarioCanal;
   urlImportacao: string;
   ativo: boolean;
+};
+
+/** Item do histórico de `POST /api/consulta` */
+export type ConsultaHistoricoItem = {
+  role: "user" | "assistant";
+  conteudo: string;
+};
+
+/** Corpo de `POST /api/consulta` */
+export type ConsultaRequestBody = {
+  pousadaId: number;
+  pergunta: string;
+  historico?: ConsultaHistoricoItem[];
+};
+
+export type ConsultaPeriodo = {
+  de: string;
+  ate: string;
+};
+
+/** Resposta de `POST /api/consulta` */
+export type ConsultaResponse = {
+  resposta: string;
+  ferramentasUsadas: string[];
+  periodoConsultado?: ConsultaPeriodo | null;
 };
 

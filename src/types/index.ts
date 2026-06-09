@@ -1,4 +1,4 @@
-export type { IsoDateString, IsoDateTimeString, PagedResult } from "./common";
+﻿export type { IsoDateString, IsoDateTimeString, PagedResult } from "./common";
 export type {
   ApiMessageBody,
   AuthLoginBody,
@@ -15,6 +15,10 @@ export type {
   VerificarDisponibilidadeBody,
   CalendarioExternoCreateBody,
   CalendarioExternoUpdateBody,
+  ConsultaHistoricoItem,
+  ConsultaPeriodo,
+  ConsultaRequestBody,
+  ConsultaResponse,
 } from "./dto";
 export type {
   BloqueioAgenda,
