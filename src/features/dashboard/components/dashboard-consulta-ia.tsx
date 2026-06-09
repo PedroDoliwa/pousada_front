@@ -1,42 +1,23 @@
-"use client";
+﻿"use client";
 
-import {
-  BarChart3,
-  CalendarRange,
-  DollarSign,
-  Send,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { Send, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
-import { monthLabel } from "@/features/dashboard/utils";
-
-const SUGGESTIONS = [
-  {
-    icon: DollarSign,
-    tone: "bg-violet-50 text-violet-600",
-    text: () => `Qual foi o faturamento de ${monthLabel(0)}?`,
-  },
-  {
-    icon: Users,
-    tone: "bg-emerald-50 text-emerald-600",
-    text: () => "Quantos hóspedes únicos tivemos este mês?",
-  },
-  {
-    icon: CalendarRange,
-    tone: "bg-amber-50 text-amber-600",
-    text: () => "Quais quartos estão mais ocupados?",
-  },
-  {
-    icon: BarChart3,
-    tone: "bg-blue-50 text-blue-600",
-    text: () => "Compare a ocupação com o mês passado.",
-  },
-] as const;
+import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
+import { SUGGESTION_CHIPS } from "@/features/consulta-inteligente/constants";
 
 export function DashboardConsultaIa() {
+  const router = useRouter();
   const [pergunta, setPergunta] = useState("");
+
+  const navigateToConsulta = useCallback(
+    (q: string) => {
+      const trimmed = q.trim();
+      if (!trimmed) return;
+      router.push(`/consulta-inteligente?q=${encodeURIComponent(trimmed)}`);
+    },
+    [router]
+  );
 
   return (
     <article className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -58,11 +39,11 @@ export function DashboardConsultaIa() {
 
       <div className="flex flex-col gap-2.5 px-4 py-3">
         <div className="grid grid-cols-1 gap-1.5">
-          {SUGGESTIONS.map(({ icon: Icon, tone, text }) => (
+          {SUGGESTION_CHIPS.map(({ id, icon: Icon, tone, text }) => (
             <button
-              key={text()}
+              key={id}
               type="button"
-              onClick={() => setPergunta(text())}
+              onClick={() => setPergunta(text)}
               className="flex min-w-0 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/50 px-2.5 py-2 text-left text-[11px] leading-snug text-slate-700 transition hover:border-blue-200 hover:bg-blue-50/40"
             >
               <span
@@ -70,7 +51,7 @@ export function DashboardConsultaIa() {
               >
                 <Icon className="size-3" aria-hidden />
               </span>
-              <span className="min-w-0 truncate">{text()}</span>
+              <span className="min-w-0 truncate">{text}</span>
             </button>
           ))}
         </div>
@@ -79,9 +60,7 @@ export function DashboardConsultaIa() {
           className="flex items-center gap-1.5"
           onSubmit={(e) => {
             e.preventDefault();
-            const q = pergunta.trim();
-            if (!q) return;
-            window.location.href = `/consulta-inteligente?q=${encodeURIComponent(q)}`;
+            navigateToConsulta(pergunta);
           }}
         >
           <input
