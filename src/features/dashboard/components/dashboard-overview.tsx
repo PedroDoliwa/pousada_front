@@ -1,60 +1,114 @@
 "use client";
 
-import { Loader2, Building2, MapPin } from "lucide-react";
+import {
+  CalendarDays,
+  DollarSign,
+  Loader2,
+  PieChart,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ApiError, handleApiErrorForClient } from "@/services/api";
+import { useEffect, useMemo, useState } from "react";
+import type { DashboardData } from "@/features/dashboard/actions";
+import { useDashboardUi } from "@/features/dashboard/dashboard-ui-context";
+import { DashboardCheckinsPanel } from "@/features/dashboard/components/dashboard-checkins-panel";
+import { DashboardConsultaIa } from "@/features/dashboard/components/dashboard-consulta-ia";
+import { DashboardIcalBanner } from "@/features/dashboard/components/dashboard-ical-banner";
+import { DashboardOcupacaoResumo } from "@/features/dashboard/components/dashboard-ocupacao-resumo";
+import { DashboardStatCard } from "@/features/dashboard/components/dashboard-stat-card";
+import {
+  formatPercent,
+  metricDeltas,
+  monthLabel,
+} from "@/features/dashboard/utils";
 import { useActivePousada } from "@/features/pousada";
-import type { Quarto, Reserva } from "@/types/entities";
+import { formatCurrencyBRL } from "@/features/reservas/utils";
+import { ApiError, handleApiErrorForClient } from "@/services/api";
 
 type Props = {
-  loadExtras: (pousadaId: number) => Promise<{ quartos: Quarto[]; reservas: Reserva[] }>;
+  loadData: (pousadaId: number) => Promise<DashboardData>;
 };
 
-export function DashboardOverview({ loadExtras }: Props) {
-  const { pousadas, selectedId, selected, setSelectedId } = useActivePousada();
+export function DashboardOverview({ loadData }: Props) {
+  const { setPendingIcalCount } = useDashboardUi();
+  const { pousadas, selectedId, selected } = useActivePousada();
   const [error, setError] = useState<string | null>(null);
-  const [quartos, setQuartos] = useState<Quarto[]>([]);
-  const [reservas, setReservas] = useState<Reserva[]>([]);
-  const [loadingExtra, setLoadingExtra] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
     if (selectedId == null) return;
     let cancelled = false;
-    queueMicrotask(() => setLoadingExtra(true));
+    queueMicrotask(() => setLoading(true));
     (async () => {
       try {
-        const { quartos: q, reservas: r } = await loadExtras(selectedId);
+        const result = await loadData(selectedId);
         if (cancelled) return;
         queueMicrotask(() => {
-          setQuartos(q);
-          setReservas(r);
-          setLoadingExtra(false);
+          setData(result);
+          setPendingIcalCount(result.calendariosPendentes.length);
+          setError(null);
+          setLoading(false);
         });
       } catch (e) {
         if (cancelled) return;
         if (handleApiErrorForClient(e)) return;
         setError(
-          e instanceof ApiError ? e.message : "Não foi possível carregar os dados."
+          e instanceof ApiError ? e.message : "Não foi possível carregar o dashboard."
         );
         queueMicrotask(() => {
-          setQuartos([]);
-          setReservas([]);
-          setLoadingExtra(false);
+          setData(null);
+          setPendingIcalCount(0);
+          setLoading(false);
         });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [selectedId, loadExtras]);
+  }, [selectedId, loadData, setPendingIcalCount]);
 
-  function handleSelect(id: number) {
-    setError(null);
-    setSelectedId(id);
+  const deltas = useMemo(
+    () =>
+      data
+        ? metricDeltas(data.metricasAtual, data.metricasAnterior)
+        : null,
+    [data]
+  );
+
+  if (pousadas.length === 0) {
+    return (
+      <div className="px-6 py-8">
+        <p className="text-sm text-slate-600">
+          Nenhuma pousada cadastrada.{" "}
+          <Link
+            href="/pousadas"
+            className="font-medium text-blue-600 hover:text-blue-700"
+          >
+            Cadastre sua primeira pousada
+          </Link>
+        </p>
+      </div>
+    );
   }
 
-  if (error) {
+  if (!selected) {
+    return (
+      <div className="px-6 py-8">
+        <p className="text-sm text-slate-600">Selecione uma pousada ativa.</p>
+      </div>
+    );
+  }
+
+  if (loading && !data) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-24">
+        <Loader2 className="size-10 animate-spin text-slate-400" aria-hidden />
+      </div>
+    );
+  }
+
+  if (error && !data) {
     return (
       <div className="px-6 py-8">
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -64,90 +118,81 @@ export function DashboardOverview({ loadExtras }: Props) {
     );
   }
 
+  if (!data || !deltas) return null;
+
+  const { metricasAtual, quartos, ocupacao, reservas, hospedes, calendariosPendentes } =
+    data;
+
   return (
-    <div className="px-6 py-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Pousada ativa</p>
-          {pousadas.length > 0 ? (
-            <select
-              id="pousada-select"
-              className="mt-1 max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-              value={selectedId ?? ""}
-              onChange={(e) =>
-                handleSelect(Number.parseInt(e.target.value, 10))
-              }
-            >
-              {pousadas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                  {p.ativa === false ? " (inativa)" : ""}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <p className="mt-2 text-sm text-slate-600">
-              Nenhuma pousada cadastrada.{" "}
-              <Link
-                href="/pousadas"
-                className="font-medium text-blue-600 hover:text-blue-700"
-              >
-                Cadastre sua primeira pousada
-              </Link>
-            </p>
-          )}
+    <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-x-hidden px-6 py-6">
+      {error ? (
+        <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-12">
+        <div className="min-w-0 xl:col-span-3">
+          <DashboardStatCard
+            icon={CalendarDays}
+            title="Reservas no mês"
+            value={String(metricasAtual.totalReservas)}
+            delta={deltas.reservas.text}
+            positive={deltas.reservas.positive}
+            tone="bg-blue-50 text-blue-600"
+            sparkSeed={metricasAtual.totalReservas}
+          />
+        </div>
+        <div className="min-w-0 xl:col-span-3">
+          <DashboardStatCard
+            icon={PieChart}
+            title="Taxa de Ocupação"
+            value={formatPercent(metricasAtual.taxaOcupacaoPercentual)}
+            delta={deltas.ocupacao.text}
+            positive={deltas.ocupacao.positive}
+            tone="bg-emerald-50 text-emerald-600"
+            sparkSeed={Math.round(metricasAtual.taxaOcupacaoPercentual)}
+          />
+        </div>
+        <div className="min-w-0 xl:col-span-3">
+          <DashboardStatCard
+            icon={DollarSign}
+            title={`Faturamento em ${monthLabel(0)}`}
+            value={formatCurrencyBRL(metricasAtual.faturamentoTotal)}
+            delta={deltas.faturamento.text}
+            positive={deltas.faturamento.positive}
+            tone="bg-violet-50 text-violet-600"
+            sparkSeed={Math.round(metricasAtual.faturamentoTotal / 100)}
+          />
+        </div>
+        <div className="min-w-0 xl:col-span-3">
+          <DashboardStatCard
+            icon={Users}
+            title="Hóspedes Recebidos"
+            value={String(metricasAtual.hospedesUnicos)}
+            delta={deltas.hospedes.text}
+            positive={deltas.hospedes.positive}
+            tone="bg-amber-50 text-amber-600"
+            sparkSeed={metricasAtual.hospedesUnicos}
+          />
+        </div>
+
+        <div className="min-w-0 sm:col-span-2 xl:col-span-6">
+          <DashboardOcupacaoResumo quartos={quartos} ocupacao={ocupacao} />
+        </div>
+        <div className="min-w-0 xl:col-span-3">
+          <DashboardCheckinsPanel
+            reservas={reservas}
+            quartos={quartos}
+            hospedes={hospedes}
+          />
+        </div>
+        <div className="min-w-0 xl:col-span-3">
+          <DashboardConsultaIa />
         </div>
       </div>
 
-      {selected ? (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-blue-50 p-2 text-blue-600">
-                <Building2 className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-slate-900">{selected.nome}</h3>
-                <p className="mt-1 flex items-start gap-1 text-sm text-slate-600">
-                  <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
-                  {selected.endereco}
-                </p>
-                <p className="mt-2 text-xs text-slate-500">
-                  {selected.email} · {selected.telefone}
-                </p>
-              </div>
-            </div>
-          </article>
-
-          <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Quartos</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">
-              {loadingExtra ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="size-4 animate-spin text-slate-400" aria-hidden />
-                  …
-                </span>
-              ) : (
-                quartos.length
-              )}
-            </p>
-          </article>
-
-          <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Reservas</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">
-              {loadingExtra ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="size-4 animate-spin text-slate-400" aria-hidden />
-                  …
-                </span>
-              ) : (
-                reservas.length
-              )}
-            </p>
-          </article>
-        </div>
-      ) : null}
+      <DashboardIcalBanner pendingCount={calendariosPendentes.length} />
     </div>
   );
 }

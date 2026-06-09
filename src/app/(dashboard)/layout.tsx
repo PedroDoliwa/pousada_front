@@ -1,3 +1,4 @@
+import { getSessionUserServer } from "@/features/auth/server/get-session-user";
 import { DashboardChrome } from "@/features/dashboard";
 import { ActivePousadaProvider } from "@/features/pousada";
 import { listPousadasServer } from "@/features/pousada/actions";
@@ -7,14 +8,14 @@ export default async function DashboardGroupLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pousadas = await listPousadasServer();
+  const [pousadas, user] = await Promise.all([
+    listPousadasServer(),
+    getSessionUserServer(),
+  ]);
 
   return (
     <ActivePousadaProvider pousadas={pousadas}>
-      <DashboardChrome>
-        {children}
-      </DashboardChrome>
+      <DashboardChrome user={user}>{children}</DashboardChrome>
     </ActivePousadaProvider>
   );
 }
-

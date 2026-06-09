@@ -3,14 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, LogOut } from "lucide-react";
+import { userInitials, type SessionUser } from "@/features/auth/session-user";
 import { DASHBOARD_NAV, DashboardMark } from "@/features/dashboard";
 
 type SidebarProps = {
+  user: SessionUser | null;
   onLogout: () => void;
 };
 
-export function Sidebar({ onLogout }: SidebarProps) {
+export function Sidebar({ user, onLogout }: SidebarProps) {
   const pathname = usePathname();
+  const displayName = user?.nome ?? "Usuário";
+  const displayRole = user?.perfil ?? "Sessão ativa";
 
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-slate-800 bg-[#0F172A] text-slate-200">
@@ -40,13 +44,13 @@ export function Sidebar({ onLogout }: SidebarProps) {
       <div className="border-t border-slate-800 p-3">
         <div className="flex items-center gap-3 rounded-lg bg-slate-800/80 px-3 py-2.5">
           <div className="grid size-10 shrink-0 place-items-center rounded-full bg-blue-600 text-sm font-semibold text-white">
-            U
+            {userInitials(displayName)}
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-white">
-              Usuário
+              {displayName}
             </p>
-            <p className="truncate text-xs text-slate-400">Sessão ativa</p>
+            <p className="truncate text-xs text-slate-400">{displayRole}</p>
           </div>
           <ChevronDown className="size-4 shrink-0 text-slate-500" aria-hidden />
         </div>
@@ -62,4 +66,3 @@ export function Sidebar({ onLogout }: SidebarProps) {
     </aside>
   );
 }
-

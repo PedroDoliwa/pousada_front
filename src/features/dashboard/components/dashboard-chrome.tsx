@@ -3,20 +3,22 @@
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import type { SessionUser } from "@/features/auth/session-user";
 import { DashboardHeader } from "@/features/dashboard";
 import { Sidebar } from "@/features/dashboard";
+import { DashboardUiProvider } from "@/features/dashboard/dashboard-ui-context";
 
 export function DashboardChrome({
   children,
+  user,
 }: {
   children: React.ReactNode;
+  user: SessionUser | null;
 }) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // A proteção de rota agora é feita por cookie httpOnly (middleware/server).
-    // No cliente, apenas liberamos o layout após mount.
     queueMicrotask(() => setReady(true));
   }, [router]);
 
@@ -35,13 +37,16 @@ export function DashboardChrome({
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
-      <Sidebar onLogout={handleLogout} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <DashboardHeader />
-        <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+    <DashboardUiProvider>
+      <div className="flex min-h-screen bg-[#F8FAFC]">
+        <Sidebar user={user} onLogout={handleLogout} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <DashboardHeader />
+          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </DashboardUiProvider>
   );
 }
-

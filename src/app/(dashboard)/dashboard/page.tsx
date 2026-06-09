@@ -1,7 +1,6 @@
 import { DashboardOverview } from "@/features/dashboard";
-import { loadDashboardExtrasServer } from "@/features/dashboard/actions";
+import { loadDashboardDataServer } from "@/features/dashboard/actions";
 
 export default function DashboardPage() {
-  return <DashboardOverview loadExtras={loadDashboardExtrasServer} />;
+  return <DashboardOverview loadData={loadDashboardDataServer} />;
 }
-
