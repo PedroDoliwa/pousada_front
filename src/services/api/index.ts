@@ -17,19 +17,30 @@ export {
   type ApiRequestOptions,
 } from "./client";
 export * as authApi from "./auth";
+export * as usuarioApi from "./usuario";
 export * as pousadasApi from "./pousadas";
 export * as quartosApi from "./quartos";
 export * as hospedesApi from "./hospedes";
 export * as reservasApi from "./reservas";
 export * as calendariosApi from "./calendarios";
 export * as metricasApi from "./metricas";
-export { login, registro } from "./auth";
+export { login, registro, esqueciSenha, redefinirSenha } from "./auth";
+export {
+  getPerfil,
+  updatePerfil,
+  updateSenha,
+  solicitarRedefinicaoSenha,
+  uploadFoto,
+  deleteFoto,
+} from "./usuario";
 export {
   createPousada,
   deletePousada,
+  deletePousadaFoto,
   getPousada,
   listPousadas,
   updatePousada,
+  uploadPousadaFoto,
 } from "./pousadas";
 export {
   createQuarto,

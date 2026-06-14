@@ -27,6 +27,38 @@ export type ApiMessageBody = {
   message?: string;
 };
 
+/** Resposta de `GET /api/usuario/perfil` */
+export type UsuarioPerfil = {
+  id: number;
+  nome: string;
+  email: string;
+  perfil: string;
+  temFoto: boolean;
+};
+
+/** Resposta de `PUT /api/usuario/perfil` */
+export type UsuarioPerfilAtualizado = UsuarioPerfil & {
+  token: string;
+};
+
+export type UsuarioUpdate = {
+  nome: string;
+};
+
+export type UsuarioSenhaUpdate = {
+  senhaAtual: string;
+  senhaNova: string;
+};
+
+export type EsqueciSenha = {
+  email: string;
+};
+
+export type RedefinirSenha = {
+  token: string;
+  senhaNova: string;
+};
+
 export type PousadaCreateBody = {
   nome: string;
   descricao?: string | null;

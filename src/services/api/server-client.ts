@@ -42,7 +42,9 @@ export async function apiRequestServer<T>(
   const { auth = true, body, headers: initHeaders, ...rest } = init;
   const headers = new Headers(initHeaders);
 
-  if (body !== undefined && !headers.has("Content-Type")) {
+  const isFormData = body instanceof FormData;
+
+  if (body !== undefined && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -54,7 +56,12 @@ export async function apiRequestServer<T>(
   const res = await fetch(buildUrl(path), {
     ...rest,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body:
+      body === undefined
+        ? undefined
+        : isFormData
+          ? body
+          : JSON.stringify(body),
     cache: "no-store",
   });
 
