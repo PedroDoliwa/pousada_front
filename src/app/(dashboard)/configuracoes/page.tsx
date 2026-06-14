@@ -1,6 +1,8 @@
-import { PagePlaceholder } from "@/features/dashboard";
+import { ConfiguracoesView } from "@/features/conta/components/configuracoes-view";
+import { getPerfilServer } from "@/features/conta";
 
-export default function ConfiguracoesPage() {
-  return <PagePlaceholder title="Configurações" />;
+export default async function ConfiguracoesPage() {
+  const perfil = await getPerfilServer();
+  return <ConfiguracoesView initialPerfil={perfil} />;
 }
 
