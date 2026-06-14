@@ -38,11 +38,11 @@ export function DashboardChrome({
 
   return (
     <DashboardUiProvider>
-      <div className="flex min-h-screen bg-[#F8FAFC]">
+      <div className="flex h-screen overflow-hidden bg-[#F8FAFC]">
         <Sidebar user={user} onLogout={handleLogout} />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <DashboardHeader />
-          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
+          <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
             {children}
           </main>
         </div>
