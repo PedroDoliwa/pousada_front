@@ -25,6 +25,8 @@ export interface Pousada {
   descricao: string | null;
   /** Presente nas respostas de leitura da API. */
   ativa?: boolean;
+  /** Presente nas respostas de leitura da API. */
+  temFoto?: boolean;
 }
 
 export interface Quarto {

@@ -5,9 +5,11 @@ import {
   BedDouble,
   Building2,
   CalendarDays,
+  Camera,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Loader2,
   Pencil,
   Plus,
   Search,
@@ -18,10 +20,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createPousadaServer,
+  deletePousadaFotoServer,
   deletePousadaServer,
   updatePousadaServer,
+  uploadPousadaFotoServer,
 } from "@/features/pousada/actions";
 import { useActivePousada } from "@/features/pousada";
+import { validateFotoFile } from "@/features/conta/schema";
 import { listQuartosServer } from "@/features/quartos/actions";
 import { listReservasServer } from "@/features/reservas/actions";
 import { formatCurrencyBRL } from "@/features/reservas/utils";
@@ -98,17 +103,32 @@ function statusBadgeClass(pousada: Pousada): string {
     : "bg-slate-100 text-slate-600 ring-slate-500/20";
 }
 
-function PousadaCover({ pousada }: { pousada: Pousada }) {
+function PousadaCoverPlaceholder({ nome }: { nome: string }) {
   return (
-    <div className="relative h-14 w-20 overflow-hidden rounded-lg bg-gradient-to-br from-emerald-200 via-amber-100 to-blue-200 shadow-sm ring-1 ring-slate-200">
-      <div className="absolute inset-x-0 bottom-0 h-7 bg-emerald-700/70" />
-      <div className="absolute bottom-2 left-2 h-5 w-8 rounded-sm bg-amber-900/70" />
-      <div className="absolute bottom-3 left-5 h-3 w-3 rounded-sm bg-white/75" />
-      <div className="absolute right-2 top-2 rounded bg-white/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
-        {getInitials(pousada.nome) || "P"}
-      </div>
+    <div className="grid h-14 w-20 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-emerald-100 to-blue-100 text-sm font-bold text-slate-700 ring-1 ring-slate-200">
+      {getInitials(nome) || "P"}
     </div>
   );
+}
+
+function PousadaCover({
+  pousada,
+  cacheBust = 0,
+}: {
+  pousada: Pousada;
+  cacheBust?: number;
+}) {
+  if (pousada.temFoto) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={`/api/pousadas/${pousada.id}/foto${cacheBust ? `?t=${cacheBust}` : ""}`}
+        alt={`Foto de ${pousada.nome}`}
+        className="h-14 w-20 shrink-0 rounded-lg object-cover ring-1 ring-slate-200"
+      />
+    );
+  }
+  return <PousadaCoverPlaceholder nome={pousada.nome} />;
 }
 
 function StatCard({
@@ -169,8 +189,30 @@ export function PousadasView() {
   >(null);
   const [deleteTarget, setDeleteTarget] = useState<Pousada | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [modalTemFoto, setModalTemFoto] = useState(false);
+  const [fotoCacheBust, setFotoCacheBust] = useState<Record<number, number>>(
+    {}
+  );
+  const [removingFoto, setRemovingFoto] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (fotoPreview) URL.revokeObjectURL(fotoPreview);
+    };
+  }, [fotoPreview]);
+
+  function clearFotoState() {
+    setFotoFile(null);
+    setFotoPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+    setModalTemFoto(false);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -268,6 +310,7 @@ export function PousadasView() {
 
   function openCreate() {
     setForm(emptyForm());
+    clearFotoState();
     setModal({ mode: "create" });
   }
 
@@ -279,7 +322,59 @@ export function PousadasView() {
       email: pousada.email,
       descricao: pousada.descricao ?? "",
     });
+    setFotoFile(null);
+    setFotoPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+    setModalTemFoto(pousada.temFoto ?? false);
     setModal({ mode: "edit", pousada });
+  }
+
+  function handleFotoSelect(file: File | undefined) {
+    if (!file) return;
+    const validationError = validateFotoFile(file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    setError(null);
+    setFotoFile(file);
+    setFotoPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return URL.createObjectURL(file);
+    });
+  }
+
+  async function handleRemoveFoto() {
+    if (modal?.mode !== "edit") return;
+    if (!confirm("Remover a foto da pousada?")) return;
+
+    setRemovingFoto(true);
+    setError(null);
+    try {
+      const result = await deletePousadaFotoServer(modal.pousada.id);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setModalTemFoto(false);
+      setFotoFile(null);
+      setFotoPreview((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return null;
+      });
+      setRows((current) =>
+        current.map((pousada) =>
+          pousada.id === modal.pousada.id
+            ? { ...pousada, temFoto: false }
+            : pousada
+        )
+      );
+      router.refresh();
+    } finally {
+      setRemovingFoto(false);
+    }
   }
 
   function selectPousada(pousada: Pousada) {
@@ -305,11 +400,14 @@ export function PousadasView() {
     setSaving(true);
     setError(null);
     try {
+      let pousadaId: number;
+
       if (modal?.mode === "edit") {
         await updatePousadaServer(modal.pousada.id, {
           id: modal.pousada.id,
           ...body,
         });
+        pousadaId = modal.pousada.id;
         setRows((current) =>
           current.map((pousada) =>
             pousada.id === modal.pousada.id ? { ...pousada, ...body } : pousada
@@ -319,12 +417,34 @@ export function PousadasView() {
         if (selectedId === modal.pousada.id) setSelectedId(modal.pousada.id);
       } else {
         const created = await createPousadaServer(body);
+        pousadaId = created.id;
         setRows((current) => [...current, created]);
         setSelectedPousadaId(created.id);
         setSelectedId(created.id);
       }
+
+      if (fotoFile) {
+        const payload = new FormData();
+        payload.append("arquivo", fotoFile);
+        const fotoResult = await uploadPousadaFotoServer(pousadaId, payload);
+        if (fotoResult.error) {
+          setError(fotoResult.error);
+        } else {
+          setRows((current) =>
+            current.map((pousada) =>
+              pousada.id === pousadaId ? { ...pousada, temFoto: true } : pousada
+            )
+          );
+          setFotoCacheBust((current) => ({
+            ...current,
+            [pousadaId]: Date.now(),
+          }));
+        }
+      }
+
       setModal(null);
       setForm(emptyForm());
+      clearFotoState();
       router.refresh();
     } catch (err) {
       const msg = apiErrorMessage(err, "Não foi possível salvar a pousada.");
@@ -518,7 +638,10 @@ export function PousadasView() {
                             onClick={() => selectPousada(pousada)}
                             className="flex items-center gap-3 text-left"
                           >
-                            <PousadaCover pousada={pousada} />
+                            <PousadaCover
+                              pousada={pousada}
+                              cacheBust={fotoCacheBust[pousada.id]}
+                            />
                             <span>
                               <span className="block font-semibold text-slate-900">
                                 {pousada.nome}
@@ -786,6 +909,67 @@ export function PousadasView() {
                   placeholder="Descreva a pousada, localização e diferenciais."
                 />
               </label>
+
+              <div className="sm:col-span-2">
+                <span className="text-sm font-medium text-slate-700">
+                  Foto da pousada
+                </span>
+                <div className="mt-3 flex flex-wrap items-center gap-4">
+                  {fotoPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={fotoPreview}
+                      alt="Pré-visualização da foto"
+                      className="h-20 w-28 rounded-lg object-cover ring-1 ring-slate-200"
+                    />
+                  ) : modal.mode === "edit" && modalTemFoto ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`/api/pousadas/${modal.pousada.id}/foto${fotoCacheBust[modal.pousada.id] ? `?t=${fotoCacheBust[modal.pousada.id]}` : ""}`}
+                      alt={`Foto de ${modal.pousada.nome}`}
+                      className="h-20 w-28 rounded-lg object-cover ring-1 ring-slate-200"
+                    />
+                  ) : (
+                    <PousadaCoverPlaceholder nome={form.nome || "Pousada"} />
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      id="pousada-foto"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      onChange={(event) => {
+                        handleFotoSelect(event.target.files?.[0]);
+                        event.target.value = "";
+                      }}
+                    />
+                    <label
+                      htmlFor="pousada-foto"
+                      className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                    >
+                      <Camera className="size-4" aria-hidden />
+                      Escolher imagem
+                    </label>
+
+                    {modal.mode === "edit" && modalTemFoto && !fotoPreview ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleRemoveFoto()}
+                        disabled={removingFoto || saving}
+                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+                      >
+                        {removingFoto ? (
+                          <Loader2 className="size-4 animate-spin" aria-hidden />
+                        ) : (
+                          <Trash2 className="size-4" aria-hidden />
+                        )}
+                        Remover foto
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
 
               <div className="mt-2 flex justify-end gap-2 sm:col-span-2">
                 <button

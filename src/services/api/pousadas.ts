@@ -1,6 +1,7 @@
 import { api } from "./client";
 import { apiPath } from "./constants";
-import type { PousadaCreateBody, PousadaUpdateBody } from "@/types/dto";
+import { apiRequestServer } from "./server-client";
+import type { ApiMessageBody, PousadaCreateBody, PousadaUpdateBody } from "@/types/dto";
 import type { Pousada } from "@/types/entities";
 
 export async function listPousadas(): Promise<Pousada[]> {
@@ -26,5 +27,21 @@ export async function updatePousada(
 
 export async function deletePousada(id: number): Promise<void> {
   await api.delete<void>(apiPath(`/pousadas/${id}`));
+}
+
+export async function uploadPousadaFoto(
+  id: number,
+  formData: FormData
+): Promise<ApiMessageBody> {
+  return apiRequestServer<ApiMessageBody>(apiPath(`/pousadas/${id}/foto`), {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function deletePousadaFoto(id: number): Promise<ApiMessageBody> {
+  return apiRequestServer<ApiMessageBody>(apiPath(`/pousadas/${id}/foto`), {
+    method: "DELETE",
+  });
 }
 
