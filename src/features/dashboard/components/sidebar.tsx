@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, LogOut } from "lucide-react";
-import { userInitials, type SessionUser } from "@/features/auth/session-user";
+import { LogOut } from "lucide-react";
+import type { SessionUser } from "@/features/auth/session-user";
+import { UsuarioAvatar } from "@/features/conta/components/usuario-avatar";
 import { DASHBOARD_NAV, DashboardMark } from "@/features/dashboard";
 
 type SidebarProps = {
@@ -13,11 +14,12 @@ type SidebarProps = {
 
 export function Sidebar({ user, onLogout }: SidebarProps) {
   const pathname = usePathname();
-  const displayName = user?.nome ?? "Usuário";
-  const displayRole = user?.perfil ?? "Sessão ativa";
+  const displayName = user?.nome?.trim() || "Usuário";
+  const displayRole = user?.perfil?.trim() || "Gerente";
+  const temFoto = user?.temFoto ?? false;
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-slate-800 bg-[#0F172A] text-slate-200">
+    <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-slate-800 bg-[#0F172A] text-slate-200">
       <div className="border-b border-slate-800 px-4 py-5">
         <DashboardMark />
       </div>
@@ -42,18 +44,18 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
       </nav>
 
       <div className="border-t border-slate-800 p-3">
-        <div className="flex items-center gap-3 rounded-lg bg-slate-800/80 px-3 py-2.5">
-          <div className="grid size-10 shrink-0 place-items-center rounded-full bg-blue-600 text-sm font-semibold text-white">
-            {userInitials(displayName)}
-          </div>
+        <Link
+          href="/configuracoes"
+          className="flex items-center gap-3 rounded-lg bg-slate-800/80 px-3 py-2.5 transition hover:bg-slate-800"
+        >
+          <UsuarioAvatar nome={displayName} temFoto={temFoto} size="sm" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-white">
               {displayName}
             </p>
             <p className="truncate text-xs text-slate-400">{displayRole}</p>
           </div>
-          <ChevronDown className="size-4 shrink-0 text-slate-500" aria-hidden />
-        </div>
+        </Link>
         <button
           type="button"
           onClick={onLogout}
