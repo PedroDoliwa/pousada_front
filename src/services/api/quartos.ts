@@ -42,6 +42,6 @@ export function urlExportacaoIcs(
     );
   }
   const token = encodeURIComponent(tokenExportacao);
-  return `${base}${apiPath(`/quartos/${quartoId}/calendario.ics`)}?token=${token}`;
+  return `${base}${apiPath(`/quartos/${quartoId}/calendario/${token}.ics`)}`;
 }
 
