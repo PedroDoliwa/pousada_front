@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   AlertTriangle,
@@ -23,7 +23,7 @@ import {
   formatReservaCodigo,
   isReservaImportada,
 } from "@/features/reservas/utils";
-import { useActivePousada } from "@/features/pousada";
+import { useActivePousada, PousadaGateShell } from "@/features/pousada";
 import type { Hospede, Quarto, Reserva, ReservaOrigem } from "@/types/entities";
 
 const STATUS_FILTERS = [
@@ -72,7 +72,7 @@ function origemLabel(origem: ReservaOrigem | string): string {
 const PAGE_SIZE = 10;
 
 export function ReservasView() {
-  const { selectedId: pousadaId, pousadas } = useActivePousada();
+  const { selectedId: pousadaId } = useActivePousada();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reservas, setReservas] = useState<Reserva[]>([]);
@@ -105,11 +105,6 @@ export function ReservasView() {
       queueMicrotask(() => {
         setLoading(false);
         setReservas([]);
-        if (pousadas.length === 0) {
-          setError("Cadastre uma pousada antes de gerenciar reservas.");
-        } else {
-          setError("Selecione uma pousada ativa no painel.");
-        }
       });
       return;
     }
@@ -145,7 +140,7 @@ export function ReservasView() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey, pousadaId, pousadas.length]);
+  }, [reloadKey, pousadaId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -225,28 +220,27 @@ export function ReservasView() {
     }
   }
 
+  const rangeStart = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, filtered.length);
+
+  let content: React.ReactNode;
+
   if (loading) {
-    return (
+    content = (
       <div className="flex flex-1 items-center justify-center py-24">
         <Loader2 className="size-10 animate-spin text-slate-400" aria-hidden />
       </div>
     );
-  }
-
-  if (error && reservas.length === 0) {
-    return (
+  } else if (error && reservas.length === 0) {
+    content = (
       <div className="px-6 py-8">
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </p>
       </div>
     );
-  }
-
-  const rangeStart = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(page * PAGE_SIZE, filtered.length);
-
-  return (
+  } else {
+    content = (
     <div className="px-6 py-8">
       {error ? (
         <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -531,5 +525,10 @@ export function ReservasView() {
         </div>
       ) : null}
     </div>
+    );
+  }
+
+  return (
+    <PousadaGateShell feature="reservas">{content}</PousadaGateShell>
   );
 }

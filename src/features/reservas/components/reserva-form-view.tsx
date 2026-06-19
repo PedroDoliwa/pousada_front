@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   AlertTriangle,
@@ -33,7 +33,7 @@ import {
   nightsBetween,
   usesDefaultReservaTimes,
 } from "@/features/reservas/utils";
-import { useActivePousada } from "@/features/pousada";
+import { useActivePousada, PousadaGateShell } from "@/features/pousada";
 import type { Hospede, OcupacaoPeriodo, Quarto, Reserva } from "@/types/entities";
 
 type Mode = "create" | "edit" | "view";
@@ -60,7 +60,7 @@ function dateToInput(date: Date): string {
 
 export function ReservaFormView({ mode, reservaId }: Props) {
   const router = useRouter();
-  const { selectedId: pousadaId, pousadas } = useActivePousada();
+  const { selectedId: pousadaId } = useActivePousada();
 
   const [loading, setLoading] = useState(mode !== "create");
   const [saving, setSaving] = useState(false);
@@ -322,34 +322,23 @@ export function ReservaFormView({ mode, reservaId }: Props) {
     }
   }
 
-  if (pousadaId == null && !loading) {
-    return (
-      <div className="px-6 py-8">
-        <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {pousadas.length === 0
-            ? "Cadastre uma pousada antes de criar reservas."
-            : "Selecione uma pousada ativa no painel."}
-        </p>
-      </div>
-    );
-  }
+  let content: React.ReactNode;
 
   if (loading) {
-    return (
+    content = (
       <div className="flex flex-1 items-center justify-center py-24">
         <Loader2 className="size-10 animate-spin text-slate-400" aria-hidden />
       </div>
     );
-  }
+  } else {
+    const title =
+      mode === "create"
+        ? "Nova reserva"
+        : readOnly
+          ? formatReservaCodigo(reservaId ?? 0)
+          : "Editar reserva";
 
-  const title =
-    mode === "create"
-      ? "Nova reserva"
-      : readOnly
-        ? formatReservaCodigo(reservaId ?? 0)
-        : "Editar reserva";
-
-  return (
+    content = (
     <div className="px-6 py-8">
       <div className="mb-6 flex items-center gap-2 text-sm text-slate-500">
         <Link href="/reservas" className="hover:text-blue-600">
@@ -736,5 +725,12 @@ export function ReservaFormView({ mode, reservaId }: Props) {
         </aside>
       </form>
     </div>
+    );
+  }
+
+  return (
+    <PousadaGateShell feature="reservas" options={{ verb: "criar" }}>
+      {content}
+    </PousadaGateShell>
   );
 }

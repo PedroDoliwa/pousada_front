@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   AlertTriangle,
@@ -22,7 +22,7 @@ import {
 import { listReservasServer } from "@/features/dashboard/actions";
 import { listHospedesServer } from "@/features/hospedes";
 import { listQuartosServer } from "@/features/quartos/actions";
-import { useActivePousada } from "@/features/pousada";
+import { useActivePousada, PousadaGateShell } from "@/features/pousada";
 import type {
   CalendarioExterno,
   Hospede,
@@ -112,7 +112,7 @@ function origemBadgeClass(origem: string): string {
 }
 
 export function IntegracaoIcalView() {
-  const { selectedId: pousadaId, pousadas } = useActivePousada();
+  const { selectedId: pousadaId } = useActivePousada();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -209,11 +209,6 @@ export function IntegracaoIcalView() {
         setLoading(false);
         setQuartos([]);
         setFeeds([]);
-        if (pousadas.length === 0) {
-          setError("Cadastre uma pousada antes de configurar integrações.");
-        } else {
-          setError("Selecione uma pousada ativa no painel.");
-        }
       });
       return;
     }
@@ -245,7 +240,7 @@ export function IntegracaoIcalView() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- carga inicial por pousada
-  }, [pousadaId, pousadas.length, reloadData]);
+  }, [pousadaId, reloadData]);
 
   useEffect(() => {
     if (selectedQuartoId === "" || pousadaId == null) {
@@ -407,25 +402,24 @@ export function IntegracaoIcalView() {
     }
   }
 
+  let content: React.ReactNode;
+
   if (loading) {
-    return (
+    content = (
       <div className="flex flex-1 items-center justify-center py-24">
         <Loader2 className="size-10 animate-spin text-slate-400" aria-hidden />
       </div>
     );
-  }
-
-  if (error && quartos.length === 0 && pousadaId != null) {
-    return (
+  } else if (error && quartos.length === 0 && pousadaId != null) {
+    content = (
       <div className="px-6 py-8">
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </p>
       </div>
     );
-  }
-
-  return (
+  } else {
+    content = (
     <div className="px-6 py-8">
       {error ? (
         <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -835,5 +829,10 @@ export function IntegracaoIcalView() {
         </div>
       ) : null}
     </div>
+    );
+  }
+
+  return (
+    <PousadaGateShell feature="integracoes">{content}</PousadaGateShell>
   );
 }

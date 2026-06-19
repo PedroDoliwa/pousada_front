@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   ArrowDown,
@@ -13,7 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useActivePousada } from "@/features/pousada";
+import { useActivePousada, PousadaGateShell } from "@/features/pousada";
 import { formatCurrencyBRL, nightsBetween } from "@/features/reservas/utils";
 import { ApiError, handleApiErrorForClient } from "@/services/api";
 import type { Hospede, Quarto, Reserva, ReservaOrigem } from "@/types/entities";
@@ -341,7 +341,7 @@ function DonutCard({
 }
 
 export function RelatoriosView({ loadData }: Props) {
-  const { selectedId: pousadaId, pousadas } = useActivePousada();
+  const { selectedId: pousadaId } = useActivePousada();
   const initialPeriod = useMemo(() => defaultPeriod(), []);
   const [start, setStart] = useState(initialPeriod.start);
   const [end, setEnd] = useState(initialPeriod.end);
@@ -360,11 +360,6 @@ export function RelatoriosView({ loadData }: Props) {
         setQuartos([]);
         setReservas([]);
         setHospedes([]);
-        setError(
-          pousadas.length === 0
-            ? "Cadastre uma pousada antes de visualizar relatórios."
-            : "Selecione uma pousada ativa no painel."
-        );
       });
       return;
     }
@@ -399,7 +394,7 @@ export function RelatoriosView({ loadData }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [loadData, pousadaId, pousadas.length]);
+  }, [loadData, pousadaId]);
 
   const quartoById = useMemo(() => {
     const map = new Map<number, Quarto>();
@@ -572,17 +567,18 @@ export function RelatoriosView({ loadData }: Props) {
     URL.revokeObjectURL(url);
   }
 
+  let content: React.ReactNode;
+
   if (error) {
-    return (
+    content = (
       <div className="px-6 py-8">
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </p>
       </div>
     );
-  }
-
-  return (
+  } else {
+    content = (
     <div className="flex flex-1 flex-col gap-6 px-6 py-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -826,5 +822,10 @@ export function RelatoriosView({ loadData }: Props) {
         </>
       )}
     </div>
+    );
+  }
+
+  return (
+    <PousadaGateShell feature="relatorios">{content}</PousadaGateShell>
   );
 }

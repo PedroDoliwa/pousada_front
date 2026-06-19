@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   CalendarDays,
@@ -7,7 +7,6 @@ import {
   PieChart,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { DashboardData } from "@/features/dashboard/actions";
 import { useDashboardUi } from "@/features/dashboard/dashboard-ui-context";
@@ -21,7 +20,7 @@ import {
   metricDeltas,
   monthLabel,
 } from "@/features/dashboard/utils";
-import { useActivePousada } from "@/features/pousada";
+import { PousadaGateShell, usePousadaGate } from "@/features/pousada";
 import { formatCurrencyBRL } from "@/features/reservas/utils";
 import { ApiError, handleApiErrorForClient } from "@/services/api";
 
@@ -29,20 +28,37 @@ type Props = {
   loadData: (pousadaId: number) => Promise<DashboardData>;
 };
 
+const dashboardSkeleton = (
+  <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-x-hidden px-6 py-6">
+    <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-12">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div
+          key={index}
+          className="h-28 rounded-xl bg-slate-100 xl:col-span-3"
+        />
+      ))}
+      <div className="h-64 rounded-xl bg-slate-100 sm:col-span-2 xl:col-span-6" />
+      <div className="h-64 rounded-xl bg-slate-100 xl:col-span-3" />
+      <div className="h-64 rounded-xl bg-slate-100 xl:col-span-3" />
+    </div>
+  </div>
+);
+
 export function DashboardOverview({ loadData }: Props) {
   const { setPendingIcalCount } = useDashboardUi();
-  const { pousadas, selectedId, selected } = useActivePousada();
+  const gate = usePousadaGate();
+  const pousadaId = gate.blocked ? null : gate.pousadaId;
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
-    if (selectedId == null) return;
+    if (pousadaId == null) return;
     let cancelled = false;
     queueMicrotask(() => setLoading(true));
     (async () => {
       try {
-        const result = await loadData(selectedId);
+        const result = await loadData(pousadaId);
         if (cancelled) return;
         queueMicrotask(() => {
           setData(result);
@@ -66,7 +82,7 @@ export function DashboardOverview({ loadData }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [selectedId, loadData, setPendingIcalCount]);
+  }, [pousadaId, loadData, setPendingIcalCount]);
 
   const deltas = useMemo(
     () =>
@@ -76,123 +92,111 @@ export function DashboardOverview({ loadData }: Props) {
     [data]
   );
 
-  if (pousadas.length === 0) {
-    return (
-      <div className="px-6 py-8">
-        <p className="text-sm text-slate-600">
-          Nenhuma pousada cadastrada.{" "}
-          <Link
-            href="/pousadas"
-            className="font-medium text-blue-600 hover:text-blue-700"
-          >
-            Cadastre sua primeira pousada
-          </Link>
-        </p>
-      </div>
-    );
-  }
-
-  if (!selected) {
-    return (
-      <div className="px-6 py-8">
-        <p className="text-sm text-slate-600">Selecione uma pousada ativa.</p>
-      </div>
-    );
-  }
+  let content: React.ReactNode;
 
   if (loading && !data) {
-    return (
+    content = (
       <div className="flex flex-1 items-center justify-center py-24">
         <Loader2 className="size-10 animate-spin text-slate-400" aria-hidden />
       </div>
     );
-  }
-
-  if (error && !data) {
-    return (
+  } else if (error && !data) {
+    content = (
       <div className="px-6 py-8">
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </p>
       </div>
     );
+  } else if (!data || !deltas) {
+    content = null;
+  } else {
+    const {
+      metricasAtual,
+      quartos,
+      ocupacao,
+      reservas,
+      hospedes,
+      calendariosPendentes,
+    } = data;
+
+    content = (
+      <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-x-hidden px-6 py-6">
+        {error ? (
+          <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-12">
+          <div className="min-w-0 xl:col-span-3">
+            <DashboardStatCard
+              icon={CalendarDays}
+              title="Reservas no mês"
+              value={String(metricasAtual.totalReservas)}
+              delta={deltas.reservas.text}
+              positive={deltas.reservas.positive}
+              tone="bg-blue-50 text-blue-600"
+              sparkSeed={metricasAtual.totalReservas}
+            />
+          </div>
+          <div className="min-w-0 xl:col-span-3">
+            <DashboardStatCard
+              icon={PieChart}
+              title="Taxa de Ocupação"
+              value={formatPercent(metricasAtual.taxaOcupacaoPercentual)}
+              delta={deltas.ocupacao.text}
+              positive={deltas.ocupacao.positive}
+              tone="bg-emerald-50 text-emerald-600"
+              sparkSeed={Math.round(metricasAtual.taxaOcupacaoPercentual)}
+            />
+          </div>
+          <div className="min-w-0 xl:col-span-3">
+            <DashboardStatCard
+              icon={DollarSign}
+              title={`Faturamento em ${monthLabel(0)}`}
+              value={formatCurrencyBRL(metricasAtual.faturamentoTotal)}
+              delta={deltas.faturamento.text}
+              positive={deltas.faturamento.positive}
+              tone="bg-violet-50 text-violet-600"
+              sparkSeed={Math.round(metricasAtual.faturamentoTotal / 100)}
+            />
+          </div>
+          <div className="min-w-0 xl:col-span-3">
+            <DashboardStatCard
+              icon={Users}
+              title="Hóspedes Recebidos"
+              value={String(metricasAtual.hospedesUnicos)}
+              delta={deltas.hospedes.text}
+              positive={deltas.hospedes.positive}
+              tone="bg-amber-50 text-amber-600"
+              sparkSeed={metricasAtual.hospedesUnicos}
+            />
+          </div>
+
+          <div className="min-w-0 sm:col-span-2 xl:col-span-6">
+            <DashboardOcupacaoResumo quartos={quartos} ocupacao={ocupacao} />
+          </div>
+          <div className="min-w-0 xl:col-span-3">
+            <DashboardCheckinsPanel
+              reservas={reservas}
+              quartos={quartos}
+              hospedes={hospedes}
+            />
+          </div>
+          <div className="min-w-0 xl:col-span-3">
+            <DashboardConsultaIa />
+          </div>
+        </div>
+
+        <DashboardIcalBanner pendingCount={calendariosPendentes.length} />
+      </div>
+    );
   }
 
-  if (!data || !deltas) return null;
-
-  const { metricasAtual, quartos, ocupacao, reservas, hospedes, calendariosPendentes } =
-    data;
-
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-x-hidden px-6 py-6">
-      {error ? (
-        <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {error}
-        </p>
-      ) : null}
-
-      <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-12">
-        <div className="min-w-0 xl:col-span-3">
-          <DashboardStatCard
-            icon={CalendarDays}
-            title="Reservas no mês"
-            value={String(metricasAtual.totalReservas)}
-            delta={deltas.reservas.text}
-            positive={deltas.reservas.positive}
-            tone="bg-blue-50 text-blue-600"
-            sparkSeed={metricasAtual.totalReservas}
-          />
-        </div>
-        <div className="min-w-0 xl:col-span-3">
-          <DashboardStatCard
-            icon={PieChart}
-            title="Taxa de Ocupação"
-            value={formatPercent(metricasAtual.taxaOcupacaoPercentual)}
-            delta={deltas.ocupacao.text}
-            positive={deltas.ocupacao.positive}
-            tone="bg-emerald-50 text-emerald-600"
-            sparkSeed={Math.round(metricasAtual.taxaOcupacaoPercentual)}
-          />
-        </div>
-        <div className="min-w-0 xl:col-span-3">
-          <DashboardStatCard
-            icon={DollarSign}
-            title={`Faturamento em ${monthLabel(0)}`}
-            value={formatCurrencyBRL(metricasAtual.faturamentoTotal)}
-            delta={deltas.faturamento.text}
-            positive={deltas.faturamento.positive}
-            tone="bg-violet-50 text-violet-600"
-            sparkSeed={Math.round(metricasAtual.faturamentoTotal / 100)}
-          />
-        </div>
-        <div className="min-w-0 xl:col-span-3">
-          <DashboardStatCard
-            icon={Users}
-            title="Hóspedes Recebidos"
-            value={String(metricasAtual.hospedesUnicos)}
-            delta={deltas.hospedes.text}
-            positive={deltas.hospedes.positive}
-            tone="bg-amber-50 text-amber-600"
-            sparkSeed={metricasAtual.hospedesUnicos}
-          />
-        </div>
-
-        <div className="min-w-0 sm:col-span-2 xl:col-span-6">
-          <DashboardOcupacaoResumo quartos={quartos} ocupacao={ocupacao} />
-        </div>
-        <div className="min-w-0 xl:col-span-3">
-          <DashboardCheckinsPanel
-            reservas={reservas}
-            quartos={quartos}
-            hospedes={hospedes}
-          />
-        </div>
-        <div className="min-w-0 xl:col-span-3">
-          <DashboardConsultaIa />
-        </div>
-      </div>
-
-      <DashboardIcalBanner pendingCount={calendariosPendentes.length} />
-    </div>
+    <PousadaGateShell feature="dashboard" skeleton={dashboardSkeleton}>
+      {content}
+    </PousadaGateShell>
   );
 }
