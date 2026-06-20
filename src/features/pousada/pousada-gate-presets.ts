@@ -39,7 +39,6 @@ export type PousadaGatePresetOptions = {
 };
 
 export type PousadaGatePreset = {
-  iconTone: "amber" | "blue";
   title: string;
   description: string;
   hint?: string;
@@ -67,19 +66,15 @@ export function getPousadaGatePreset(
 
   if (reason === "no-pousada") {
     return {
-      iconTone: "amber",
       title: "Cadastre sua primeira pousada",
       description: `Você precisa cadastrar uma pousada antes de ${verb} ${label}.`,
       primaryLabel: "Cadastrar pousada",
       primaryHref: "/pousadas",
-      secondaryLabel: "Voltar ao painel",
-      secondaryHref: "/dashboard",
       dismissible: false,
     };
   }
 
   return {
-    iconTone: "blue",
     title: "Selecione uma pousada",
     description: `Escolha uma pousada ativa antes de ${verb} ${label}.`,
     hint: "Use o seletor no topo da página.",

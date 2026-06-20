@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import { Building2 } from "lucide-react";
 import { RequiredActionDialog } from "@/components/ui/required-action-dialog";
 import {
   getPousadaGatePreset,
@@ -29,8 +28,7 @@ export function PousadaRequiredDialog({
   return (
     <RequiredActionDialog
       open={open}
-      icon={Building2}
-      iconTone={preset.iconTone}
+      overlayScope="dashboard-main"
       title={preset.title}
       description={preset.description}
       hint={preset.hint}

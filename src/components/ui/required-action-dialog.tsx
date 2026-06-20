@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
 
@@ -12,8 +11,6 @@ type ActionConfig = {
 
 export type RequiredActionDialogProps = {
   open: boolean;
-  icon: LucideIcon;
-  iconTone?: "amber" | "blue" | "violet";
   title: string;
   description: string;
   hint?: string;
@@ -21,12 +18,8 @@ export type RequiredActionDialogProps = {
   secondaryAction?: ActionConfig;
   dismissible?: boolean;
   onClose?: () => void;
-};
-
-const ICON_TONE_CLASS: Record<NonNullable<RequiredActionDialogProps["iconTone"]>, string> = {
-  amber: "bg-amber-100 text-amber-700",
-  blue: "bg-blue-100 text-blue-700",
-  violet: "bg-violet-100 text-violet-700",
+  /** Cobre só a área principal do dashboard, deixando a sidebar visível. */
+  overlayScope?: "viewport" | "dashboard-main";
 };
 
 function ActionButton({
@@ -65,8 +58,6 @@ function ActionButton({
 
 export function RequiredActionDialog({
   open,
-  icon: Icon,
-  iconTone = "amber",
   title,
   description,
   hint,
@@ -74,6 +65,7 @@ export function RequiredActionDialog({
   secondaryAction,
   dismissible = false,
   onClose,
+  overlayScope = "viewport",
 }: RequiredActionDialogProps) {
   const titleId = useId();
   const primaryRef = useRef<HTMLButtonElement>(null);
@@ -100,9 +92,14 @@ export function RequiredActionDialog({
     if (dismissible) onClose?.();
   }
 
+  const overlayClassName =
+    overlayScope === "dashboard-main"
+      ? "fixed top-0 right-0 bottom-0 left-64 z-[60] flex items-center justify-center p-4"
+      : "fixed inset-0 z-[60] flex items-center justify-center p-4";
+
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className={overlayClassName}
       role="presentation"
       onClick={handleBackdropClick}
     >
@@ -114,12 +111,6 @@ export function RequiredActionDialog({
         className="relative w-full max-w-md rounded-2xl border border-white/20 bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className={`mb-4 inline-flex size-12 items-center justify-center rounded-full ${ICON_TONE_CLASS[iconTone]}`}
-        >
-          <Icon className="size-6" aria-hidden />
-        </div>
-
         <h2 id={titleId} className="text-lg font-semibold text-slate-900">
           {title}
         </h2>
