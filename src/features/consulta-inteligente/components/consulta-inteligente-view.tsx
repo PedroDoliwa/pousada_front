@@ -16,7 +16,7 @@ import {
   SUGGESTION_CHIPS,
   type LocalChatMessage,
 } from "@/features/consulta-inteligente/constants";
-import { useActivePousada } from "@/features/pousada";
+import { useActivePousada, PousadaGateShell, usePousadaGate } from "@/features/pousada";
 import { ApiError, handleApiErrorForClient } from "@/services/api";
 import type { ConsultaHistoricoItem, ConsultaPeriodo } from "@/types/dto";
 
@@ -59,6 +59,7 @@ function createMessageId(): string {
 
 export function ConsultaInteligenteView({ initialPergunta }: Props) {
   const { selectedId: pousadaId, selected } = useActivePousada();
+  const gate = usePousadaGate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -226,7 +227,8 @@ export function ConsultaInteligenteView({ initialPergunta }: Props) {
   const showSuggestions = messages.length === 0 && !loading;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-6 py-8">
+    <PousadaGateShell feature="consulta-ia">
+      <div className="flex min-h-0 flex-1 flex-col px-6 py-8">
       <article className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <header className="shrink-0 border-b border-slate-100 px-5 py-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -248,12 +250,12 @@ export function ConsultaInteligenteView({ initialPergunta }: Props) {
               Pousada ativa:{" "}
               <span className="font-medium text-slate-700">{selected.nome}</span>
             </p>
-          ) : (
+          ) : !gate.blocked ? (
             <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-amber-700">
               <AlertCircle className="size-3.5 shrink-0" aria-hidden />
               Selecione uma pousada no topo da página.
             </p>
-          )}
+          ) : null}
         </header>
 
         {bannerError ? (
@@ -404,5 +406,6 @@ export function ConsultaInteligenteView({ initialPergunta }: Props) {
         </footer>
       </article>
     </div>
+    </PousadaGateShell>
   );
 }

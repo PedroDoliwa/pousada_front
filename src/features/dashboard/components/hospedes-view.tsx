@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   AlertTriangle,
@@ -19,7 +19,7 @@ import {
   updateHospedeServer,
 } from "@/features/hospedes";
 import { listReservasServer } from "@/features/dashboard/actions";
-import { useActivePousada } from "@/features/pousada";
+import { useActivePousada, PousadaGateShell } from "@/features/pousada";
 import type { Hospede } from "@/types/entities";
 
 function formatPhoneBR(value: string | null): string {
@@ -72,7 +72,7 @@ function apiErrorMessage(err: unknown, fallback: string): string | null {
 }
 
 export function HospedesView() {
-  const { selectedId: pousadaId, pousadas } = useActivePousada();
+  const { selectedId: pousadaId } = useActivePousada();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hospedes, setHospedes] = useState<Hospede[]>([]);
@@ -98,13 +98,6 @@ export function HospedesView() {
         setLoading(false);
         setHospedes([]);
         setReservaCountByHospede(new Map());
-        if (pousadas.length === 0) {
-          setError(
-            "Cadastre uma pousada antes de gerenciar hóspedes."
-          );
-        } else {
-          setError("Selecione uma pousada ativa no painel.");
-        }
       });
       return;
     }
@@ -142,7 +135,7 @@ export function HospedesView() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey, pousadaId, pousadas.length]);
+  }, [reloadKey, pousadaId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -232,25 +225,24 @@ export function HospedesView() {
     }
   }
 
+  let content: React.ReactNode;
+
   if (loading) {
-    return (
+    content = (
       <div className="flex flex-1 items-center justify-center py-24">
         <Loader2 className="size-10 animate-spin text-slate-400" aria-hidden />
       </div>
     );
-  }
-
-  if (error && hospedes.length === 0) {
-    return (
+  } else if (error && hospedes.length === 0) {
+    content = (
       <div className="px-6 py-8">
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </p>
       </div>
     );
-  }
-
-  return (
+  } else {
+    content = (
     <div className="px-6 py-8">
       {error ? (
         <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -575,5 +567,10 @@ export function HospedesView() {
         </div>
       ) : null}
     </div>
+    );
+  }
+
+  return (
+    <PousadaGateShell feature="hospedes">{content}</PousadaGateShell>
   );
 }

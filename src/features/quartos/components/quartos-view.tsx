@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   AlertTriangle,
@@ -19,7 +19,7 @@ import {
   listQuartosServer,
   updateQuartoServer,
 } from "@/features/quartos/actions";
-import { useActivePousada } from "@/features/pousada";
+import { useActivePousada, PousadaGateShell } from "@/features/pousada";
 import type { Quarto } from "@/types/entities";
 
 const STATUS_OPTIONS = [
@@ -101,7 +101,7 @@ function statusDotClass(status: string): string {
 const PAGE_SIZE = 10;
 
 export function QuartosView() {
-  const { selectedId: pousadaId, pousadas } = useActivePousada();
+  const { selectedId: pousadaId } = useActivePousada();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quartos, setQuartos] = useState<Quarto[]>([]);
@@ -124,11 +124,6 @@ export function QuartosView() {
       queueMicrotask(() => {
         setLoading(false);
         setQuartos([]);
-        if (pousadas.length === 0) {
-          setError("Cadastre uma pousada antes de gerenciar quartos.");
-        } else {
-          setError("Selecione uma pousada ativa no painel.");
-        }
       });
       return;
     }
@@ -156,7 +151,7 @@ export function QuartosView() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey, pousadaId, pousadas.length]);
+  }, [reloadKey, pousadaId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -273,25 +268,24 @@ export function QuartosView() {
   const rangeStart = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(page * PAGE_SIZE, filtered.length);
 
+  let content: React.ReactNode;
+
   if (loading) {
-    return (
+    content = (
       <div className="flex flex-1 items-center justify-center py-24">
         <Loader2 className="size-10 animate-spin text-slate-400" aria-hidden />
       </div>
     );
-  }
-
-  if (error && quartos.length === 0) {
-    return (
+  } else if (error && quartos.length === 0) {
+    content = (
       <div className="px-6 py-8">
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </p>
       </div>
     );
-  }
-
-  return (
+  } else {
+    content = (
     <div className="px-6 py-8">
       {error ? (
         <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -688,5 +682,10 @@ export function QuartosView() {
         </div>
       ) : null}
     </div>
+    );
+  }
+
+  return (
+    <PousadaGateShell feature="quartos">{content}</PousadaGateShell>
   );
 }

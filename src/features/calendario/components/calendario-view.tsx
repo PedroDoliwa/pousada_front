@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   BedDouble,
@@ -15,7 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ApiError, handleApiErrorForClient } from "@/services/api";
-import { useActivePousada } from "@/features/pousada";
+import { useActivePousada, PousadaGateShell } from "@/features/pousada";
 import type { CalendarioData } from "@/features/calendario/actions";
 import {
   buildDayCell,
@@ -99,7 +99,7 @@ function SummaryCard({
 
 export function CalendarioView({ loadData }: Props) {
   const router = useRouter();
-  const { selectedId: pousadaId, pousadas } = useActivePousada();
+  const { selectedId: pousadaId } = useActivePousada();
 
   const [anchor, setAnchor] = useState(() => new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("mes");
@@ -130,11 +130,6 @@ export function CalendarioView({ loadData }: Props) {
         setLoading(false);
         setQuartos([]);
         setOcupacao([]);
-        setError(
-          pousadas.length === 0
-            ? "Cadastre uma pousada antes de visualizar o calendário."
-            : "Selecione uma pousada ativa no painel."
-        );
       });
       return;
     }
@@ -167,7 +162,7 @@ export function CalendarioView({ loadData }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [loadData, pousadaId, pousadas.length, de, ate]);
+  }, [loadData, pousadaId, de, ate]);
 
   const ocupacaoByQuarto = useMemo(() => {
     const map = new Map<number, OcupacaoPeriodo[]>();
@@ -241,25 +236,24 @@ export function CalendarioView({ loadData }: Props) {
     router.push(`/reservas/${reservaId}`);
   }
 
+  let content: React.ReactNode;
+
   if (loading) {
-    return (
+    content = (
       <div className="flex flex-1 items-center justify-center py-24">
         <Loader2 className="size-10 animate-spin text-slate-400" aria-hidden />
       </div>
     );
-  }
-
-  if (error && quartos.length === 0) {
-    return (
+  } else if (error && quartos.length === 0) {
+    content = (
       <div className="px-6 py-8">
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </p>
       </div>
     );
-  }
-
-  return (
+  } else {
+    content = (
     <div className="flex flex-1 flex-col gap-6 px-6 py-6">
       {error ? (
         <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -536,6 +530,11 @@ export function CalendarioView({ loadData }: Props) {
         </div>
       </div>
     </div>
+    );
+  }
+
+  return (
+    <PousadaGateShell feature="calendario">{content}</PousadaGateShell>
   );
 }
 
